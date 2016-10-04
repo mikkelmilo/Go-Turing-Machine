@@ -9,12 +9,12 @@ type State struct {
 
 //TM a Turing Machine where the input- and output alphabets consist of 1 and 0.
 type TM struct {
-	States       []*State
 	StartState   *State
 	AcceptState  *State
+	RejectState  *State
 	CurrentState *State
 	Transitions  []Transition
-	Tape         []string
+	Tape         []uint8
 	Head         int
 }
 
@@ -22,23 +22,47 @@ type TM struct {
 type Transition struct {
 	curState  *State
 	newState  *State
-	curSymbol string
-	newSymbol string
-	dir       string
+	curSymbol uint8
+	newSymbol uint8
+	dir       uint8
 }
 
+// One representation
+const One uint8 = 49
+
+// Zero representation
+const Zero uint8 = 48
+
+//Empty underscore
+const Empty uint8 = 95
+
+// LeftBracket representation
+const LeftBracket = 123
+
+// RightBracket representation
+const RightBracket = 125
+
+// Left arrow
+const Left = 60
+
+// Right arrow
+const Right = 62
+
 // NewTM constructor for the TM struct
-func NewTM(s string) TM {
+func NewTM(s []uint8) TM {
 	tm := TM{}
 	tm.Head = 0
-	tm.StartState = &State{"q_0"}
-	tm.Tape = []string{"_"}
-	if s != "" {
-		tm.AddInput(s)
+	tm.Tape = []uint8{Empty}
+	if s != nil && len(s) != 0 {
+		tm.Tape = append(tm.Tape, s...)
+	} else {
+		tm.Tape = []uint8{Empty, Empty}
+
 	}
 	return tm
 }
 
+/*
 // AddInput add an input string to the TM
 func (tm *TM) AddInput(s string) {
 	a := 1
@@ -46,33 +70,43 @@ func (tm *TM) AddInput(s string) {
 		if tm.Head+a >= len(tm.Tape) {
 			tm.Tape = expandTape(tm.Tape)
 		}
-		tm.Tape[tm.Head+a] = fmt.Sprintf("%c", i)
+		tm.Tape[tm.Head+a] = i
 		a++
 	}
-}
+}*/
 
 // doubles the size of the tape and places "_" symbols on the new slots
-func expandTape(s []string) []string {
+func expandTape(s []uint8) []uint8 {
 	length := len(s)
-	a := make([]string, length)
+	a := make([]uint8, length)
 	for i := range a {
-		a[i] = "_"
+		a[i] = Empty
 	}
 	return append(s, a...)
 }
 
 // Run the TM until it halts (we assume it always halts)
-func (tm *TM) Run() error {
-	printTM(tm)
+func (tm *TM) Run(state, quit chan int) {
+	var steps uint64
+	steps = 0
 	for tm.CurrentState != tm.AcceptState {
-		err := tm.Step()
-		if err != nil {
-			return err
+		select {
+		case <-state:
+			PrintTM(tm)
+		case <-quit:
+			quit <- 1
+			return
+		default:
+			err := tm.Step()
+			steps++
+			if err != nil {
+				fmt.Println(err)
+				quit <- -1
+			}
 		}
-		printTM(tm)
-
 	}
-	return nil
+	quit <- 1
+	return
 }
 
 // Step : takes one step
@@ -87,18 +121,18 @@ func (tm *TM) Step() error {
 	return nil
 }
 
-func (tm *TM) makeTransition(s *State, symbol string) error {
+func (tm *TM) makeTransition(s *State, symbol uint8) error {
 	found := false
 	for _, t := range tm.Transitions {
 		if t.curState == s && t.curSymbol == symbol {
 			tm.CurrentState = t.newState
 			tm.Tape[tm.Head] = t.newSymbol
-			if t.dir == ">" {
+			if t.dir == One {
 				tm.Head++
 				if tm.Head >= len(tm.Tape) {
 					tm.Tape = expandTape(tm.Tape)
 				}
-			} else if t.dir == "<" {
+			} else if t.dir == Zero {
 				if tm.Head <= 0 {
 					return fmt.Errorf("tried to move < out of bounds")
 				}
@@ -109,22 +143,44 @@ func (tm *TM) makeTransition(s *State, symbol string) error {
 		}
 	}
 	if found == false && tm.CurrentState != tm.AcceptState {
-		return fmt.Errorf("no transitions found on state %s with symbol %s", s.Name, symbol)
+		return fmt.Errorf("no transitions found on state %s with symbol %d", s.Name, symbol)
 	}
 	return nil
 }
 
 //AddTransition asd
 func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error {
-	if curSymbol != "0" && curSymbol != "1" && curSymbol != "_" {
-		return fmt.Errorf("Illegal argument: %s. Must be a 0 or 1", curSymbol)
-	} else if newSymbol != "0" && newSymbol != "1" && newSymbol != "_" {
-		return fmt.Errorf("Illegal argument: %s . Must be a 0 or 1", newSymbol)
-	} else if dir != "<" && dir != ">" && dir != "_" {
+	cSymbol := mapInput(curSymbol)
+	nSymbol := mapInput(newSymbol)
+	var cdir uint8
+	if dir == "<" {
+		cdir = Zero
+	} else if dir == ">" {
+		cdir = One
+	} else if dir == "_" {
+		cdir = Empty
+	} else {
 		return fmt.Errorf("Illegal argument: %s . Must be either <, > or _", dir)
 	}
-	tm.Transitions = append(tm.Transitions, Transition{curState, newState, curSymbol, newSymbol, dir})
+
+	if cSymbol == 3 {
+		return fmt.Errorf("Illegal argument: %s. Must be 0 or 1 or _", curSymbol)
+	} else if nSymbol == 3 {
+		return fmt.Errorf("Illegal argument: %s . Must be 0 or 1 or _", newSymbol)
+	}
+	tm.Transitions = append(tm.Transitions, Transition{curState, newState, cSymbol, nSymbol, cdir})
 	return nil
+}
+
+func mapInput(a string) uint8 {
+	if a == "0" {
+		return Zero
+	} else if a == "1" {
+		return One
+	} else if a == "_" {
+		return Empty
+	}
+	return 3
 }
 
 // SetStartState set the start state
@@ -137,15 +193,17 @@ func (tm *TM) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
 
-// AddState add a state to the TM
-func (tm *TM) AddState(s *State) {
-	tm.States = append(tm.States, s)
-}
-
-func printTM(tm *TM) {
+// PrintTM prints tm tape
+func PrintTM(tm *TM) {
 	fmt.Println("Tape:")
 	a := tm.Tape[tm.Head]
-	tm.Tape[tm.Head] = "{" + a + "}"
-	fmt.Println(tm.Tape)
-	tm.Tape[tm.Head] = a
+	i := tm.Tape[0:tm.Head]
+	j := tm.Tape[tm.Head+1 : len(tm.Tape)]
+	p := make([]uint8, len(i))
+	copy(p, i)
+	p = append(p, LeftBracket)
+	p = append(p, a)
+	p = append(p, RightBracket)
+	p = append(p, j...)
+	fmt.Printf("%c \n", p)
 }
