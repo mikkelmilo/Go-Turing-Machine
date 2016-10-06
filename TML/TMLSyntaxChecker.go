@@ -52,7 +52,7 @@ var startedMacroDef bool
 //CheckSyntax checks syntax..
 func CheckSyntax(fileLocation string) ([]string, error) {
 	formatted, err := formatInput(readFile(fileLocation))
-	fmt.Print("formatted input: ")
+
 	fmt.Printf("%d %q\n", len(formatted), formatted)
 	//str := SpaceMap(readFile("test.txt"))
 	//a := strings.Count(str, ";")
@@ -210,6 +210,9 @@ func checkVariableName(s string) bool {
 }
 
 func checkCommand(s string) bool {
+	if checkMacroDefinition(s) {
+		return true
+	}
 	hasBoundary := strings.HasPrefix(s, "(") && strings.HasSuffix(s, ")")
 	if hasBoundary && strings.Count(s, ",") == 4 {
 		s1 := s[1 : len(s)-1]
@@ -246,7 +249,10 @@ func checkCommand(s string) bool {
 
 func checkProgram(s []string) bool {
 	for _, a := range s {
-		if checkCommand(a) == false {
+		if a == "}" && startedMacroDef == true {
+			startedMacroDef = false
+			continue
+		} else if checkCommand(a) == false {
 			fmt.Println("incorrect command:", a)
 			return false
 		}
@@ -258,18 +264,19 @@ func checkProgram(s []string) bool {
 
 func checkMacroLabel(s string) bool {
 	//s does not include the "{"
-	if String.HasPefix(s, "Macro(") && String.HasSuffix(s, ")") {
+	if strings.HasPrefix(s, "Macro(") && strings.HasSuffix(s, ")") {
 		return checkVariableName(s[6 : len(s)-1])
 	}
 	return false
 }
 
-func checkMacroDefinition(s string) {
-	if String.HasPrefix(s, "define ") {
-		s1 := SpaceMap(s[7:len(s)])
+func checkMacroDefinition(s string) bool {
+	if strings.HasPrefix(s, "define") {
+		s1 := SpaceMap(s[6:len(s)])
 		length := len(s1)
-		if s1[length-1:length] == "}" && checkMacroLabel(s1[0:length]) {
-
+		if s1[length-1:length] == "{" && checkMacroLabel(s1[0:length-1]) {
+			startedMacroDef = true
+			return true
 		}
 	}
 	return false
