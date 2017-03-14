@@ -31,6 +31,7 @@ package TML
 import (
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -53,7 +54,7 @@ var startedMacroDef bool
 func CheckSyntax(fileLocation string) ([]string, error) {
 	formatted, err := formatInput(readFile(fileLocation))
 
-	fmt.Printf("%d %q\n", len(formatted), formatted)
+	//fmt.Printf("%d %q\n", len(formatted), formatted)
 	//str := SpaceMap(readFile("test.txt"))
 	//a := strings.Count(str, ";")
 
@@ -61,7 +62,6 @@ func CheckSyntax(fileLocation string) ([]string, error) {
 		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println(checkProgram(formatted))
 	return formatted, nil
 }
 
@@ -209,8 +209,8 @@ func checkVariableName(s string) bool {
 	return false
 }
 
-func checkCommand(s string) bool {
-	if checkMacroDefinition(s) {
+func CheckCommand(s string) bool {
+	if CheckMacroDef(s) {
 		return true
 	}
 	hasBoundary := strings.HasPrefix(s, "(") && strings.HasSuffix(s, ")")
@@ -252,7 +252,9 @@ func checkProgram(s []string) bool {
 		if a == "}" && startedMacroDef == true {
 			startedMacroDef = false
 			continue
-		} else if checkCommand(a) == false {
+		} else if CheckMacroApp(a) {
+			continue
+		} else if CheckCommand(a) == false {
 			fmt.Println("incorrect command:", a)
 			return false
 		}
@@ -262,7 +264,7 @@ func checkProgram(s []string) bool {
 
 //ATML part
 
-func checkMacroLabel(s string) bool {
+func CheckMacroLabel(s string) bool {
 	//s does not include the "{"
 	if strings.HasPrefix(s, "Macro(") && strings.HasSuffix(s, ")") {
 		return checkVariableName(s[6 : len(s)-1])
@@ -270,14 +272,32 @@ func checkMacroLabel(s string) bool {
 	return false
 }
 
-func checkMacroDefinition(s string) bool {
+func CheckMacroDef(s string) bool {
 	if strings.HasPrefix(s, "define") {
 		s1 := SpaceMap(s[6:len(s)])
 		length := len(s1)
-		if s1[length-1:length] == "{" && checkMacroLabel(s1[0:length-1]) {
+		if s1[length-1:length] == "{" && CheckMacroLabel(s1[0:length-1]) {
 			startedMacroDef = true
 			return true
 		}
+	}
+	return false
+}
+
+// <MacroApplication> ::= "(" <StateLabel> "," <Symbol> ")" <MacroLabel> "(" <StateLabel> "," <StateLabel> ")"
+// (s,1)Macro(P)(q,q)
+func CheckMacroApp(s string) bool {
+	var validID = regexp.MustCompile(`\(([a-z]|[0-9])+\,(0|1|_)\)Macro\(([A-Z]|[a-z]|[0-9])+\)\(([a-z]|[0-9])+\,([a-z]|[0-9])+\)`)
+	if validID.MatchString(s) {
+		/*sep := strings.Index(s, ",")
+		if checkStateLabel(s[1:sep-1]) == false {
+			return false
+		}
+		if isSymbol(s[sep: strings.Index(s, ")")-1]) == false {
+			return false
+		}
+		if CheckMacroLabel(s[strings.Index(s, ")"): ])*/
+		return true
 	}
 	return false
 }

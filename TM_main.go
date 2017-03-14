@@ -9,18 +9,12 @@ import (
 )
 
 func main() {
-	//40 = ( 41 = ) 48 = 0 49 = 1 91 = [ 93 = ] 95 = _
-	/*var i uint8
-	for i = 0; i < 255; i++ {
-		fmt.Printf("%c", i)
-		fmt.Println(i)
-	}*/
+
 	scanner := bufio.NewScanner(os.Stdin)
 	quit := make(chan int)
 	c := make(chan int)
-	//input := []uint8{TM.Zero}
-	//tm := incBinaryTM(input)
-	tm := TML.Interpret()
+
+	tm := TML.Interpret("tests/compiledResult.txt")
 	go func() { tm.Run(c, quit) }()
 	go func() {
 		for scanner.Scan() {
