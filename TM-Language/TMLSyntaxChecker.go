@@ -52,7 +52,11 @@ var startedMacroDef bool
 
 //CheckSyntax checks syntax..
 func CheckSyntax(fileLocation string) ([]string, error) {
-	formatted, err := formatInput(readFile(fileLocation))
+	res, err := readFile(fileLocation)
+	if err != nil {
+		return nil, err
+	}
+	formatted, err := formatInput(res)
 
 	//fmt.Printf("%d %q\n", len(formatted), formatted)
 	//str := SpaceMap(readFile("test.txt"))
@@ -74,16 +78,9 @@ func inAlphabet(a byte) bool {
 	return false
 }
 
-func readFile(path string) string {
+func readFile(path string) (string, error) {
 	dat, err := ioutil.ReadFile(path)
-	check(err)
-	return string(dat)
-}
-
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
+	return string(dat), err
 }
 
 // formats input file and returns a slice of commands, represented as strings

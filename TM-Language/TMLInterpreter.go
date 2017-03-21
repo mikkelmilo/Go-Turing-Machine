@@ -7,11 +7,10 @@ import (
 )
 
 //Interpret interprets the input
-func Interpret(file string) *TM.TM {
+func Interpret(file string) (*TM.TM, error) {
 	output, err := CheckSyntax(file)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	formatOut := [][]string{}
 	for i := range output {
@@ -34,13 +33,13 @@ func Interpret(file string) *TM.TM {
 		}
 		err := tm.AddTransition(stateMap[tuple[0]], stateMap[tuple[1]], tuple[2], tuple[3], tuple[4])
 		if err != nil {
-			fmt.Println(err)
+			return nil, err
 		}
 	}
 	//fmt.Println("nameList: ", nameList)
 	//fmt.Println("stateMap: ", stateMap)
 
-	return &tm
+	return &tm, nil
 }
 
 func createAndAddState(name string, nameList []string, stateMap map[string]*TM.State, tm *TM.TM) {

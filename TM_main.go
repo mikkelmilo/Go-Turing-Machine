@@ -2,19 +2,27 @@ package main
 
 import (
 	"TuringMachine/TM"
-	"TuringMachine/TML"
+	"TuringMachine/TM-Language"
 	"bufio"
 	"fmt"
 	"os"
 )
 
 func main() {
-
+	if len(os.Args) != 2 {
+		fmt.Println("No file specified. Exiting")
+		os.Exit(1)
+	}
+	fileName := os.Args[1]
 	scanner := bufio.NewScanner(os.Stdin)
 	quit := make(chan int)
 	c := make(chan int)
 
-	tm := TML.Interpret("tests/compiledResult.txt")
+	tm, err := TML.Interpret(fileName)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	go func() { tm.Run(c, quit) }()
 	go func() {
 		for scanner.Scan() {
