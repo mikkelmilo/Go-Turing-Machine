@@ -1,1 +1,5 @@
-Description and documentation coming soon!
+#Go-Turing-Machine
+
+A Turing Machine implementation in Go as well as a declarative programming language for the Turing Machine.
+The language supports macros, which are lightweight functions that take no arguments. This project is not intended
+for any practical purposes at all.
