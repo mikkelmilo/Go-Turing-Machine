@@ -198,9 +198,8 @@ func (tm *TM) SetStartState(s *State) {
 func (tm *TM) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
-
-// TODO: rename to String and return a string representation instead
 // PrintTM prints tm tape
+// TODO: implement the Stringer interface: change function signature to (tm *TM)String() -> string and return a string representation instead
 func PrintTM(tm *TM) {
 	fmt.Println("Tape:")
 	a := tm.Tape[tm.Head]
