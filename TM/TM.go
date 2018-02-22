@@ -48,7 +48,11 @@ const Left = 60
 // Right arrow
 const Right = 62
 
+
 // NewTM constructor for the TM struct
+// TODO: inject an alphabet (with max size |uint8| - 3) and let that alphabet be the 
+// allowed characters on the tape aside from the special characters '<', '>', and '_'
+// build a mapping from the alphabet to uint8
 func NewTM(s []uint8) TM {
 	tm := TM{}
 	tm.Head = 0
@@ -75,6 +79,8 @@ func (tm *TM) AddInput(s string) {
 	}
 }*/
 
+// TODO: this operation may be very expensive and possibly redundant as well 
+// because the underlying array automatically expands when append() is called on a filled slice.
 // doubles the size of the tape and places "_" symbols on the new slots
 func expandTape(s []uint8) []uint8 {
 	length := len(s)
@@ -193,6 +199,7 @@ func (tm *TM) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
 
+// TODO: rename to String and return a string representation instead
 // PrintTM prints tm tape
 func PrintTM(tm *TM) {
 	fmt.Println("Tape:")
