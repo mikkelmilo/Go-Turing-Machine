@@ -1,8 +1,8 @@
 package testing
 
 import (
-	"TuringMachine/TML"
 	"fmt"
+	"github.com/mikkelmilo/Go-Turing-Machine/TM-Language"
 	"log"
 	"os"
 	"testing"

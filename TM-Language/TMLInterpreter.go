@@ -1,8 +1,8 @@
 package TML
 
 import (
-	"TuringMachine/TM"
 	"fmt"
+	"github.com/mikkelmilo/Go-Turing-Machine/TM"
 	"strings"
 )
 

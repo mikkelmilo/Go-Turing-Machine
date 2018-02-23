@@ -1,7 +1,7 @@
 package testing
 
 import (
-	"TuringMachine/TML"
+	"github.com/mikkelmilo/Go-Turing-Machine/TM-Language"
 	"testing"
 )
 

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"TuringMachine/TM"
-	"TuringMachine/TM-Language"
 	"bufio"
 	"fmt"
+	"github.com/mikkelmilo/Go-Turing-Machine/TM"
+	"github.com/mikkelmilo/Go-Turing-Machine/TM-Language"
 	"os"
 )
 
