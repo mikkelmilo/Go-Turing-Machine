@@ -37,7 +37,7 @@ func main() {
 ```
 
 This prints:
-`
+```
 Halted with error code:  1
 TM:
 Alphabet: [0 1] 
@@ -46,6 +46,5 @@ Current state: ha
 Transitions: [(hs,a,_,1,1),(a,b,_,0,1),(b,ha,_,1,_)]
 Tape:
 [_ 1 0 { 1 }] 
-
-`
+```
 The brackets around the 1 in the tape indicate that the tape head currently points at this element. 
