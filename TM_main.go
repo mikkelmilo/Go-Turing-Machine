@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/mikkelmilo/Go-Turing-Machine/TM"
 	"github.com/mikkelmilo/Go-Turing-Machine/TM-Language"
@@ -14,7 +13,6 @@ func main() {
 		os.Exit(1)
 	}
 	fileName := os.Args[1]
-	scanner := bufio.NewScanner(os.Stdin)
 	quit := make(chan int)
 	c := make(chan int)
 
@@ -23,7 +21,11 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	go func() { tm.Run(c, quit) }()
+	var err1 error
+	go func() {
+		err1 = tm.Run(c, quit)
+	}()
+	/*scanner := bufio.NewScanner(os.Stdin)
 	go func() {
 		for scanner.Scan() {
 			if scanner.Text() == "state" {
@@ -42,12 +44,14 @@ func main() {
 				fmt.Println("incorrect expression")
 			}
 		}
-	}()
+	}()*/
 	//blocks until receive data from quit channel (which is sent from Run when it halts or finds an error)
 	code := <-quit
 	fmt.Println("Halted with error code: ", code)
-	TM.PrintTM(tm)
-
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	fmt.Println(tm)
 	return
 }
 

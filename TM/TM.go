@@ -1,10 +1,17 @@
 package TM
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/micro/go-micro/errors"
+)
 
 // State struct for representing a state in the TM
 type State struct {
 	Name string
+}
+
+func (s *State) String() string {
+	return s.Name
 }
 
 //TM a Turing Machine where the input- and output alphabets consist of 1 and 0.
@@ -25,6 +32,15 @@ type Transition struct {
 	curSymbol uint8
 	newSymbol uint8
 	dir       uint8
+}
+
+func (t Transition) String() string {
+	return "(" +
+		t.curState.String() +
+		"," + t.newState.String() +
+		"," + fmt.Sprintf("%c", t.curSymbol) +
+		"," + fmt.Sprintf("%c", t.newSymbol) +
+		"," + fmt.Sprintf("%c", t.dir) + ")"
 }
 
 // One representation
@@ -48,9 +64,8 @@ const Left = 60
 // Right arrow
 const Right = 62
 
-
 // NewTM constructor for the TM struct
-// TODO: inject an alphabet (with max size |uint8| - 3) and let that alphabet be the 
+// TODO: inject an alphabet (with max size |uint8| - 3) and let that alphabet be the
 // allowed characters on the tape aside from the special characters '<', '>', and '_'
 // build a mapping from the alphabet to uint8
 func NewTM(s []uint8) TM {
@@ -79,7 +94,7 @@ func (tm *TM) AddInput(s string) {
 	}
 }*/
 
-// TODO: this operation may be very expensive and possibly redundant as well 
+// TODO: this operation may be very expensive and possibly redundant as well
 // because the underlying array automatically expands when append() is called on a filled slice.
 // doubles the size of the tape and places "_" symbols on the new slots
 func expandTape(s []uint8) []uint8 {
@@ -92,7 +107,7 @@ func expandTape(s []uint8) []uint8 {
 }
 
 // Run the TM until it halts (we assume it always halts)
-func (tm *TM) Run(state, quit chan int) {
+func (tm *TM) Run(state, quit chan int) error {
 	var steps uint64
 	steps = 0
 	for tm.CurrentState != tm.AcceptState {
@@ -101,25 +116,34 @@ func (tm *TM) Run(state, quit chan int) {
 			PrintTM(tm)
 		case <-quit:
 			quit <- 1
-			return
+			return nil
 		default:
 			err := tm.Step()
 			steps++
 			if err != nil {
-				fmt.Println(err)
 				quit <- -1
+				return err
 			}
 		}
 	}
 	quit <- 1
-	return
+	return nil
 }
 
 // Step : takes one step
 func (tm *TM) Step() error {
+	// first check if current state is nil; then set current state to the start state
+	// else check if current state is either accept or reject. If so, report an error.
 	if tm.CurrentState == nil {
 		tm.Head = 1
 		tm.CurrentState = tm.StartState
+
+	} else if tm.CurrentState == tm.AcceptState {
+		return errors.New(
+			"1", "TM is already at the accept state and cannot make further transitions", 1)
+	} else if tm.CurrentState == tm.RejectState {
+		return errors.New(
+			"2", "TM is already at the reject state and cannot make further transitions", -1)
 	} else {
 		symbol := tm.Tape[tm.Head]
 		return tm.makeTransition(tm.CurrentState, symbol)
@@ -149,7 +173,7 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 		}
 	}
 	if found == false && tm.CurrentState != tm.AcceptState {
-		return fmt.Errorf("no transitions found on state %s with symbol %d", s.Name, symbol)
+		return fmt.Errorf("no transitions found on state %s with symbol %c", s.Name, symbol)
 	}
 	return nil
 }
@@ -198,6 +222,7 @@ func (tm *TM) SetStartState(s *State) {
 func (tm *TM) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
+
 // PrintTM prints tm tape
 // TODO: implement the Stringer interface: change function signature to (tm *TM)String() -> string and return a string representation instead
 func PrintTM(tm *TM) {
@@ -212,4 +237,28 @@ func PrintTM(tm *TM) {
 	p = append(p, RightBracket)
 	p = append(p, j...)
 	fmt.Printf("%c \n", p)
+}
+
+func (tm *TM) String() string {
+	a := tm.Tape[tm.Head]
+	i := tm.Tape[0:tm.Head]
+	j := tm.Tape[tm.Head+1 : len(tm.Tape)]
+	p := make([]uint8, len(i))
+	copy(p, i)
+	p = append(p, LeftBracket)
+	p = append(p, a)
+	p = append(p, RightBracket)
+	p = append(p, j...)
+	nil_string := func(s *State) string {
+		if s == nil {
+			return "None"
+		}
+		return s.String()
+	}
+	tape := "Tape:\n" + fmt.Sprintf("%c \n", p)
+	return "TM:\n" +
+		"Reject state: " + nil_string(tm.RejectState) + "\n" +
+		"Current state: " + nil_string(tm.CurrentState) + "\n" +
+		"Transitions: " + fmt.Sprint(tm.Transitions) + "\n" +
+		tape
 }

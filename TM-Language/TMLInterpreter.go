@@ -1,7 +1,6 @@
 package TML
 
 import (
-	"fmt"
 	"github.com/mikkelmilo/Go-Turing-Machine/TM"
 	"strings"
 )
@@ -14,7 +13,7 @@ func Interpret(file string) (*TM.TM, error) {
 	}
 	formatOut := [][]string{}
 	for i := range output {
-		fmt.Println(output[i], len(output[i])-1)
+		// fmt.Println(output[i], len(output[i])-1)
 		s1 := output[i][1 : len(output[i])-1]
 		formatOut = append(formatOut, strings.SplitN(s1, ",", 5))
 	}

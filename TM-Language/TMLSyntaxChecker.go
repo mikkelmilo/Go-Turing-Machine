@@ -4,16 +4,16 @@
  * in text: in state s1 with symbol 0, replace with 1, move right, and go to state s2
  * <Program> ::= {<Command>}*
  * <Command> ::=  "(" <StateLabel>","<StateLabel>","<Symbol>","<Symbol>","<Direction>");"
- * <StateLabel> ::= <AcceptState> | <RejectState> | <StartState> <variableName>
- * <variableName ::= (<Letter>| "_"){<Letter> | <decimal digit> | "_"}*
- * <StartState> ::= "hs" ok
- * <AcceptState> ::= "ha" ok
- * <RejectState> ::= "hr" ok
- * <Letter> ::= "A" | "B" | Z | ... | "a" | "b" | ...   ok
- * <decimal digit> ::= <binary digit> | "2" | "3" | ... | 9   ok
- * <binary digit> ::= "0" | "1" ok
- * <Symbol> ::= <binary digit> | "_" ok
- * <Direction> ::= "<" | ">" | "_" ok
+ * <StateLabel> ::= <AcceptState> | <RejectState> | <StartState> | <variableName>
+ * <variableName> ::= (<Letter>| "_"){<Letter> | <decimal digit> | "_"}*
+ * <StartState> ::= "hs"
+ * <AcceptState> ::= "ha"
+ * <RejectState> ::= "hr"
+ * <Letter> ::= "A" | "B" | Z | ... | "a" | "b" | ...
+ * <decimal digit> ::= <binary digit> | "2" | "3" | ... | 9
+ * <binary digit> ::= "0" | "1"
+ * <Symbol> ::= <binary digit> | "_"
+ * <Direction> ::= "<" | ">" | "_"
  * ------------------------------------
  * BNF for ATML (Name subject to change)
  * <Program> ::= {<Command>|<MacroDefinition>|<MacroApplication>}*
