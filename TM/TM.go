@@ -1,8 +1,8 @@
 package TM
 
 import (
+	"errors"
 	"fmt"
-	"github.com/micro/go-micro/errors"
 )
 
 // State struct for representing a state in the TM
@@ -23,6 +23,8 @@ type TM struct {
 	Transitions  []Transition
 	Tape         []uint8
 	Head         int
+	Alphabet     []string
+	AlphabetMap  map[string]uint8
 }
 
 // Transition : a representation of a transition
@@ -34,12 +36,13 @@ type Transition struct {
 	dir       uint8
 }
 
-func (t Transition) String() string {
+func (t Transition) String(alphabetMap map[string]uint8) string {
+	inv_map := getInverseAlphabetMapping(alphabetMap)
 	return "(" +
 		t.curState.String() +
 		"," + t.newState.String() +
-		"," + fmt.Sprintf("%c", t.curSymbol) +
-		"," + fmt.Sprintf("%c", t.newSymbol) +
+		"," + inv_map[t.curSymbol] +
+		"," + inv_map[t.newSymbol] +
 		"," + fmt.Sprintf("%c", t.dir) + ")"
 }
 
@@ -64,35 +67,56 @@ const Left = 60
 // Right arrow
 const Right = 62
 
-// NewTM constructor for the TM struct
-// TODO: inject an alphabet (with max size |uint8| - 3) and let that alphabet be the
-// allowed characters on the tape aside from the special characters '<', '>', and '_'
-// build a mapping from the alphabet to uint8
-func NewTM(s []uint8) TM {
+/*
+ * NewTM constructs a TM from the specified alphabet, and optional initial tape.
+ * @precondition: max alphabet size is 251
+ */
+func NewTM(alphabet []string, s []string) (error, TM) {
 	tm := TM{}
+	// report an error on too large alphabet (> 253)
+	if len(alphabet) > 251 {
+		return fmt.Errorf("Alphabet size too large. Maximal size: 251. Got: %v", len(alphabet)), tm
+	}
+	// build alphabet map to uint8 on which the TM will operate
+	// uint8 values 95, 60, 62, 123, and 125 are reserved.
+	tm.Alphabet = alphabet
+	alphabetMap := make(map[string]uint8)
+	alphabetMap["_"] = Empty
+	alphabetMap["<"] = Left
+	alphabetMap[">"] = Right
+	alphabetMap["{"] = LeftBracket
+	alphabetMap["}"] = RightBracket
+
+	var cur_uint uint8 = 0
+	for _, char := range alphabet {
+		// note: this suffices since we know neither of the contants follow each other in value.
+		if cur_uint == Empty || cur_uint == Left || cur_uint == Right ||
+			cur_uint == LeftBracket || cur_uint == RightBracket {
+			cur_uint++
+		}
+		alphabetMap[char] = cur_uint
+		cur_uint++
+	}
+	tm.AlphabetMap = alphabetMap
+
 	tm.Head = 0
-	tm.Tape = []uint8{Empty}
-	if s != nil && len(s) != 0 {
-		tm.Tape = append(tm.Tape, s...)
+	// initially, set tape to an array of either two 'Empty' elements,
+	// or if a tape was given, set tape to [Empty :: s]
+	len_s := len(s)
+	if s != nil && len_s != 0 {
+		// translate given tape to type []uint8 and append
+		s_trans := make([]uint8, len_s+1)
+		s_trans[0] = Empty
+		for i, elem := range s {
+			s_trans[i+1] = alphabetMap[elem]
+		}
+		tm.Tape = s_trans
 	} else {
 		tm.Tape = []uint8{Empty, Empty}
 
 	}
-	return tm
+	return nil, tm
 }
-
-/*
-// AddInput add an input string to the TM
-func (tm *TM) AddInput(s string) {
-	a := 1
-	for _, i := range s {
-		if tm.Head+a >= len(tm.Tape) {
-			tm.Tape = expandTape(tm.Tape)
-		}
-		tm.Tape[tm.Head+a] = i
-		a++
-	}
-}*/
 
 // TODO: this operation may be very expensive and possibly redundant as well
 // because the underlying array automatically expands when append() is called on a filled slice.
@@ -113,7 +137,7 @@ func (tm *TM) Run(state, quit chan int) error {
 	for tm.CurrentState != tm.AcceptState {
 		select {
 		case <-state:
-			PrintTM(tm)
+			print(tm.String())
 		case <-quit:
 			quit <- 1
 			return nil
@@ -139,11 +163,9 @@ func (tm *TM) Step() error {
 		tm.CurrentState = tm.StartState
 
 	} else if tm.CurrentState == tm.AcceptState {
-		return errors.New(
-			"1", "TM is already at the accept state and cannot make further transitions", 1)
+		return errors.New("TM is already at the accept state and cannot make further transitions")
 	} else if tm.CurrentState == tm.RejectState {
-		return errors.New(
-			"2", "TM is already at the reject state and cannot make further transitions", -1)
+		return errors.New("TM is already at the reject state and cannot make further transitions")
 	} else {
 		symbol := tm.Tape[tm.Head]
 		return tm.makeTransition(tm.CurrentState, symbol)
@@ -178,10 +200,17 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 	return nil
 }
 
-//AddTransition asd
+//AddTransition adds a transition to the TM
 func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error {
-	cSymbol := mapInput(curSymbol)
-	nSymbol := mapInput(newSymbol)
+	cSymbol, ok1 := tm.AlphabetMap[curSymbol]
+	if !ok1 {
+		return fmt.Errorf("Symbol %v is not in the alphabet %v", curSymbol, tm.Alphabet)
+	}
+	nSymbol, ok2 := tm.AlphabetMap[newSymbol]
+	if !ok2 {
+		return fmt.Errorf("Symbol %v is not in the alphabet %v", newSymbol, tm.Alphabet)
+	}
+
 	var cdir uint8
 	if dir == "<" {
 		cdir = Zero
@@ -202,17 +231,6 @@ func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, 
 	return nil
 }
 
-func mapInput(a string) uint8 {
-	if a == "0" {
-		return Zero
-	} else if a == "1" {
-		return One
-	} else if a == "_" {
-		return Empty
-	}
-	return 3
-}
-
 // SetStartState set the start state
 func (tm *TM) SetStartState(s *State) {
 	tm.StartState = s
@@ -223,42 +241,63 @@ func (tm *TM) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
 
-// PrintTM prints tm tape
-// TODO: implement the Stringer interface: change function signature to (tm *TM)String() -> string and return a string representation instead
-func PrintTM(tm *TM) {
-	fmt.Println("Tape:")
-	a := tm.Tape[tm.Head]
-	i := tm.Tape[0:tm.Head]
-	j := tm.Tape[tm.Head+1 : len(tm.Tape)]
-	p := make([]uint8, len(i))
-	copy(p, i)
-	p = append(p, LeftBracket)
-	p = append(p, a)
-	p = append(p, RightBracket)
-	p = append(p, j...)
-	fmt.Printf("%c \n", p)
-}
-
 func (tm *TM) String() string {
-	a := tm.Tape[tm.Head]
-	i := tm.Tape[0:tm.Head]
-	j := tm.Tape[tm.Head+1 : len(tm.Tape)]
-	p := make([]uint8, len(i))
-	copy(p, i)
-	p = append(p, LeftBracket)
-	p = append(p, a)
-	p = append(p, RightBracket)
-	p = append(p, j...)
+	// convert tape into an array of characters from the alphabet
+	tape_formatted := make([]string, len(tm.Tape))
+	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
+	for i, char := range tm.Tape {
+		tape_formatted[i] = inv_map[char]
+	}
+	//insert { } around the current position on the tape
+
+	t1 := Insert(tape_formatted, tm.Head, "{")
+	t2 := Insert(t1, tm.Head+2, "}")
+
+	transitions_string := func(t []Transition) string {
+		str := "["
+		for _, trans := range t {
+			str = str + trans.String(tm.AlphabetMap) + ","
+		}
+		str = str[0 : len(str)-1] // trim last ','
+		str = str + "]"
+		return str
+	}
+
 	nil_string := func(s *State) string {
 		if s == nil {
 			return "None"
 		}
 		return s.String()
 	}
-	tape := "Tape:\n" + fmt.Sprintf("%c \n", p)
 	return "TM:\n" +
+		"Alphabet: " + fmt.Sprintf("%v \n", tm.Alphabet) +
 		"Reject state: " + nil_string(tm.RejectState) + "\n" +
 		"Current state: " + nil_string(tm.CurrentState) + "\n" +
-		"Transitions: " + fmt.Sprint(tm.Transitions) + "\n" +
-		tape
+		"Transitions: " + transitions_string(tm.Transitions) + "\n" +
+		"Tape:\n" + fmt.Sprintf("%v \n", t2)
+}
+
+/*
+ * Reverses the alphabet mapping. Assumes alphabetMap is reversible.
+ */
+func getInverseAlphabetMapping(alphabetMap map[string]uint8) map[uint8]string {
+	res := make(map[uint8]string)
+	for key, value := range alphabetMap {
+		res[value] = key
+	}
+	return res
+}
+
+// Insert inserts the value into the slice at the specified index,
+// which must be in range.
+// The slice must have room for the new element.
+func Insert(slice []string, index int, value string) []string {
+	// Grow the slice by one element.
+	r := append(slice, "")
+	// Use copy to move the upper part of the slice out of the way and open a hole.
+	copy(r[index+1:], r[index:])
+	// Store the new value.
+	r[index] = value
+	// Return the result.
+	return r
 }

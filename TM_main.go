@@ -16,7 +16,7 @@ func main() {
 	quit := make(chan int)
 	c := make(chan int)
 
-	tm, err := TML.Interpret(fileName)
+	err, tm := TML.Interpret(fileName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -73,17 +73,11 @@ func main() {
 	}
 }*/
 
-// doubles the size of the tape and places "_" symbols on the new slots
-func expandTape(s []string) []string {
-	a := make([]string, len(s))
-	for i := range a {
-		a[i] = "_"
+func incBinaryTM(s []string) *TM.TM {
+	err, tm := TM.NewTM([]string{"0", "1"}, s)
+	if err != nil {
+		print(err)
 	}
-	return append(s, a...)
-}
-
-func incBinaryTM(s []uint8) *TM.TM {
-	tm := TM.NewTM(s)
 	s1 := TM.State{Name: "r"}
 	s2 := TM.State{Name: "b"}
 	s3 := TM.State{Name: "c"}

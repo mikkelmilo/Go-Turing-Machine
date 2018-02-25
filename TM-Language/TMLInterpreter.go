@@ -6,10 +6,10 @@ import (
 )
 
 //Interpret interprets the input
-func Interpret(file string) (*TM.TM, error) {
+func Interpret(file string) (error, *TM.TM) {
 	output, err := CheckSyntax(file)
 	if err != nil {
-		return nil, err
+		return err, nil
 	}
 	formatOut := [][]string{}
 	for i := range output {
@@ -19,7 +19,10 @@ func Interpret(file string) (*TM.TM, error) {
 	}
 	nameList := []string{}
 	stateMap := make(map[string]*TM.State)
-	tm := TM.NewTM(nil)
+	err, tm := TM.NewTM([]string{"0", "1"}, nil)
+	if err != nil {
+		return err, nil
+	}
 	//add all states to map and create transitions
 	for _, tuple := range formatOut {
 		if contains(nameList, tuple[0]) == false {
@@ -32,13 +35,13 @@ func Interpret(file string) (*TM.TM, error) {
 		}
 		err := tm.AddTransition(stateMap[tuple[0]], stateMap[tuple[1]], tuple[2], tuple[3], tuple[4])
 		if err != nil {
-			return nil, err
+			return err, nil
 		}
 	}
 	//fmt.Println("nameList: ", nameList)
 	//fmt.Println("stateMap: ", stateMap)
 
-	return &tm, nil
+	return nil, &tm
 }
 
 func createAndAddState(name string, nameList []string, stateMap map[string]*TM.State, tm *TM.TM) {
