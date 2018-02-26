@@ -14,7 +14,7 @@ func main() {
 	}
 	fileName := os.Args[1]
 	quit := make(chan int)
-	c := make(chan int)
+	c := make(chan string)
 
 	err, tm := TML.Interpret(fileName)
 	if err != nil {

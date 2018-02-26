@@ -73,6 +73,10 @@ const Right = 62
  */
 func NewTM(alphabet []string, s []string) (error, TM) {
 	tm := TM{}
+
+	if alphabet == nil {
+		return errors.New("Alphabet must be different from nil"), tm
+	}
 	// report an error on too large alphabet (> 253)
 	if len(alphabet) > 251 {
 		return fmt.Errorf("Alphabet size too large. Maximal size: 251. Got: %v", len(alphabet)), tm
@@ -102,7 +106,12 @@ func NewTM(alphabet []string, s []string) (error, TM) {
 	tm.Head = 0
 	// initially, set tape to an array of either two 'Empty' elements,
 	// or if a tape was given, set tape to [Empty :: s]
-	len_s := len(s)
+	var len_s int
+	if s == nil {
+		len_s = 0
+	} else {
+		len_s = len(s)
+	}
 	if s != nil && len_s != 0 {
 		// translate given tape to type []uint8 and append
 		s_trans := make([]uint8, len_s+1)
@@ -131,13 +140,16 @@ func expandTape(s []uint8) []uint8 {
 }
 
 // Run the TM until it halts (we assume it always halts)
-func (tm *TM) Run(state, quit chan int) error {
+func (tm *TM) Run(state chan string, quit chan int) error {
 	var steps uint64
 	steps = 0
+	if tm.StartState == nil {
+		return nil
+	}
 	for tm.CurrentState != tm.AcceptState {
 		select {
 		case <-state:
-			print(tm.String())
+			tm.String()
 		case <-quit:
 			quit <- 1
 			return nil
@@ -145,12 +157,16 @@ func (tm *TM) Run(state, quit chan int) error {
 			err := tm.Step()
 			steps++
 			if err != nil {
-				quit <- -1
+				if quit != nil {
+					quit <- -1
+				}
 				return err
 			}
 		}
 	}
-	quit <- 1
+	if quit != nil {
+		quit <- 1
+	}
 	return nil
 }
 
