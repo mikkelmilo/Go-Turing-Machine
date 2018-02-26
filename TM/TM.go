@@ -149,7 +149,7 @@ func (tm *TM) Run(state chan string, quit chan int) error {
 	for tm.CurrentState != tm.AcceptState {
 		select {
 		case <-state:
-			tm.String()
+			state <- tm.String()
 		case <-quit:
 			quit <- 1
 			return nil
