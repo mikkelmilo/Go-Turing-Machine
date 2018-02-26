@@ -1,9 +1,16 @@
 # Go-Turing-Machine
 
-A Turing Machine implementation in Go as well as a declarative programming language for the Turing Machine.
+A Turing Machine implementation in Go as well as a declarative programming language (TML) for the Turing Machine.
 The language supports macros, which are lightweight functions that take no arguments.
 
-## UPDATE
+This project consists of the following components:
+- TML: a declarative programming language for specifying Turing Machines
+- ATML: an extension of TML which includes macros
+- A Turing Machine representation, which may be executed.
+- A compiler/interpreter that converts ATML/TML programs into a concrete TM instance in go  
+- other features are on the way!
+
+## !UPDATE!
 I'm reviving this project! Expect lots of improvements, clean-ups, refactoring, and new stuff!
 See the issues tab for my current TODO-list.
 
