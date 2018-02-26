@@ -29,8 +29,8 @@ type TM struct {
 
 // Transition : a representation of a transition
 type Transition struct {
-	curState  *State
-	newState  *State
+	CurState  *State
+	NewState  *State
 	curSymbol uint8
 	newSymbol uint8
 	dir       uint8
@@ -39,8 +39,8 @@ type Transition struct {
 func (t Transition) String(alphabetMap map[string]uint8) string {
 	inv_map := getInverseAlphabetMapping(alphabetMap)
 	return "(" +
-		t.curState.String() +
-		"," + t.newState.String() +
+		t.CurState.String() +
+		"," + t.NewState.String() +
 		"," + inv_map[t.curSymbol] +
 		"," + inv_map[t.newSymbol] +
 		"," + fmt.Sprintf("%c", t.dir) + ")"
@@ -192,8 +192,8 @@ func (tm *TM) Step() error {
 func (tm *TM) makeTransition(s *State, symbol uint8) error {
 	found := false
 	for _, t := range tm.Transitions {
-		if t.curState == s && t.curSymbol == symbol {
-			tm.CurrentState = t.newState
+		if t.CurState == s && t.curSymbol == symbol {
+			tm.CurrentState = t.NewState
 			tm.Tape[tm.Head] = t.newSymbol
 			if t.dir == One {
 				tm.Head++
