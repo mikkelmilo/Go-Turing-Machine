@@ -50,3 +50,5 @@ Tape:
 [_ 1 0 { 1 }] 
 ```
 The brackets around the 1 in the tape indicate that the tape head currently points at this element. 
+
+If you want to see more involved programs, see the examples in examples/ExamplePrograms.go. There is for example a TM which emulates the increment function on binary numbers. Note that the TM "programs" in ExamplePrograms.go are not written in TML. They are implemented using the functions provided by the TM package; TM.AddTransition(...), etc. For a fun exercise, try to convert these programs into TML programs. It should be rather straight-forward.
