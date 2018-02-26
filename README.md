@@ -20,7 +20,8 @@ Save this in a file called 'test'.
 
 ```golang
 func main() {
-	err, tm := TML.Interpret("test") // interprets the file and creates a TM ready to execute the program
+	// interprets the file and creates a TM ready to execute the program
+	err, tm := TML.Interpret("test") 
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -28,7 +29,8 @@ func main() {
 	go func() {
 		tm.Run(c, quit) // run the TM in a separate goroutine
 	}()
-	//blocks until receive data from quit channel (which is sent from Run when it halts or finds an error)
+	// blocks until receive data from quit channel 
+	// (which is sent from Run when it halts or finds an error)
 	code := <-quit
 	fmt.Println("Halted with error code: ", code)
 	fmt.Println(tm) // prints a nicely formatted version of the TM
