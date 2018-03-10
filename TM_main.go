@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/mikkelmilo/Go-Turing-Machine/TM"
 	"github.com/mikkelmilo/Go-Turing-Machine/TM-Language"
 	"os"
 )

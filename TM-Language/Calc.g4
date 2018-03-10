@@ -12,6 +12,8 @@ WHITESPACE: [ \r\n\t]+ -> skip;
 // Rules
 start : expression EOF;
 
+// earlier expressions have higher precedence.
+// The part after # is the type name to be used in the generated go code
 expression
    : expression op=('*'|'/') expression # MulDiv
    | expression op=('+'|'-') expression # AddSub
