@@ -29,15 +29,15 @@ WHITESPACE: [ \r\n\t]+ -> skip;
 
 
 // Rules
-start : primaryExpression EOF;
+start : program EOF;
 
 // earlier expressions have higher precedence.
 // The part after # is the type name to be used in the generated go code
-primaryExpression
-	:	subExpression+
+program
+	:	statement+
 	;
 
-subExpression
+statement
 	:	command
 	|	macroDef
 	|	macroApp
@@ -48,20 +48,17 @@ macroApp
 			stateLabel COMMA
 			tapeSymbol
 		RPAREN
-		macroLabel
+		ID
 		LPAREN
 			stateLabel COMMA
-			stateLabel COMMA
+			stateLabel
 		RPAREN
 	;
 
 macroDef
-	:	DEFINE macroLabel LBRACE subExpression* RBRACE
+	:	DEFINE MACRO ID LBRACE statement* RBRACE
 	;
 
-macroLabel
-	:	MACRO LPAREN ID RPAREN
-	;
 
 command
 	:	LPAREN

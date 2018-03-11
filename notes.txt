@@ -6,3 +6,16 @@ else if M ends in h_r go to p_3
 ------------------------------------------------
 En TM starter i [_, {_},...]
 dvs. (hs, a, _, b, >) → [_, b, {_},...]
+
+
+Semantic rules:
+
+Whenever a macro application (p_1, σ)M(p_2,p_3) is used, the sequence of statements within
+the definition of the macro is simply substituted in place of the macro application.
+The 'ha' and 'hr' inside the macro definition are replaced with transitions
+to p_2 and p_3, respectively. Thus, if the macro ends in state 'ha', then
+in the macro application it will instsead end din p_2, and likewise for 'hr' and p_2.
+
+
+TML programs must contain a (reachable) start state, an accept state, and a reject state.
+Inside a macro definition there must exist a (reachable) accept & reject state.
