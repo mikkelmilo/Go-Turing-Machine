@@ -10,7 +10,7 @@ import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 )
 
-// Suppress unused import errors
+// Suppress unused import Errors
 var _ = fmt.Printf
 var _ = reflect.Copy
 var _ = strconv.Itoa
