@@ -41,33 +41,10 @@ func nestingLvlString(lvl int) string {
 	return str
 }
 
-/*
-func (t *TMLTreePrinterListener) VisitTerminal(node antlr.TerminalNode) {
-	panic("implement me")
-}
-
-func (t *TMLTreePrinterListener) VisitErrorNode(node antlr.ErrorNode) {
-}
-
-func (t *TMLTreePrinterListener) EnterEveryRule(ctx antlr.ParserRuleContext) {
-	panic("implement me")
-}
-
-func (t *TMLTreePrinterListener) ExitEveryRule(ctx antlr.ParserRuleContext) {
-	panic("implement me")
-}
-*/
-func (t *TMLTreePrinterListener) EnterStart(c *StartContext) {
-	t.nesting_lvl = 0
-}
-
 func (t *TMLTreePrinterListener) EnterProgram(c *ProgramContext) {
+	t.nesting_lvl = 0
 	println("Program:")
 	t.nesting_lvl++
-
-}
-
-func (t *TMLTreePrinterListener) EnterStatement(c *StatementContext) {
 }
 
 func (t *TMLTreePrinterListener) EnterMacroApp(c *MacroAppContext) {
@@ -97,14 +74,8 @@ func (t *TMLTreePrinterListener) EnterDirection(c *DirectionContext) {
 	print(c.GetText() + " ")
 }
 
-func (t *TMLTreePrinterListener) ExitStart(c *StartContext) {
-}
-
 func (t *TMLTreePrinterListener) ExitProgram(c *ProgramContext) {
 	t.nesting_lvl--
-}
-
-func (t *TMLTreePrinterListener) ExitStatement(c *StatementContext) {
 }
 
 func (t *TMLTreePrinterListener) ExitMacroApp(c *MacroAppContext) {
@@ -117,15 +88,6 @@ func (t *TMLTreePrinterListener) ExitMacroDef(c *MacroDefContext) {
 
 func (t *TMLTreePrinterListener) ExitCommand(c *CommandContext) {
 	println(")")
-}
-
-func (t *TMLTreePrinterListener) ExitStateLabel(c *StateLabelContext) {
-}
-
-func (t *TMLTreePrinterListener) ExitTapeSymbol(c *TapeSymbolContext) {
-}
-
-func (t *TMLTreePrinterListener) ExitDirection(c *DirectionContext) {
 }
 
 type TMLerrorListener struct {
@@ -168,29 +130,11 @@ type TMLMacroUnfolder struct {
 	uniqueNr     int
 }
 
-func (*TMLMacroUnfolder) VisitTerminal(node antlr.TerminalNode) {
-}
-
-func (*TMLMacroUnfolder) VisitErrorNode(node antlr.ErrorNode) {
-}
-
-func (*TMLMacroUnfolder) EnterEveryRule(ctx antlr.ParserRuleContext) {
-}
-
-func (*TMLMacroUnfolder) ExitEveryRule(ctx antlr.ParserRuleContext) {
-}
-
-func (*TMLMacroUnfolder) EnterStart(c *StartContext) {
-}
-
 func (t *TMLMacroUnfolder) EnterProgram(c *ProgramContext) {
 	t.Program = make([]Command, 0)
 	t.macros = make(map[string][]Command)
 	t.currentMacro = ""
 	t.uniqueNr = 0
-}
-
-func (*TMLMacroUnfolder) EnterStatement(c *StatementContext) {
 }
 
 func (t *TMLMacroUnfolder) EnterMacroApp(c *MacroAppContext) {
@@ -263,42 +207,12 @@ func (t *TMLMacroUnfolder) EnterCommand(c *CommandContext) {
 	}
 }
 
-func (t *TMLMacroUnfolder) EnterStateLabel(c *StateLabelContext) {
-}
-
-func (t *TMLMacroUnfolder) EnterTapeSymbol(c *TapeSymbolContext) {
-}
-
 func (t *TMLMacroUnfolder) EnterDirection(c *DirectionContext) {
 	t.Program[len(t.Program)-1].Direction = c.GetText()
 }
 
-func (*TMLMacroUnfolder) ExitStart(c *StartContext) {
-}
-
-func (*TMLMacroUnfolder) ExitProgram(c *ProgramContext) {
-}
-
-func (*TMLMacroUnfolder) ExitStatement(c *StatementContext) {
-}
-
-func (*TMLMacroUnfolder) ExitMacroApp(c *MacroAppContext) {
-}
-
 func (t *TMLMacroUnfolder) ExitMacroDef(c *MacroDefContext) {
 	t.currentMacro = ""
-}
-
-func (*TMLMacroUnfolder) ExitCommand(c *CommandContext) {
-}
-
-func (*TMLMacroUnfolder) ExitStateLabel(c *StateLabelContext) {
-}
-
-func (*TMLMacroUnfolder) ExitTapeSymbol(c *TapeSymbolContext) {
-}
-
-func (*TMLMacroUnfolder) ExitDirection(c *DirectionContext) {
 }
 
 func (t *TMLMacroUnfolder) GenerateUniqueStates(c []Command, macroName string, seed int) []Command {
