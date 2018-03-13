@@ -4,8 +4,8 @@ A Turing Machine implementation in Go as well as a declarative programming langu
 The language supports macros, which are lightweight functions that take no arguments.
 
 This project consists of the following components:
-- TML: a declarative programming language for specifying Turing Machines
-- ATML: an extension of TML which includes macros
+- TML: a declarative programming language for specifying Turing Machines, including support for macros
+- ATML: anextension of TML which includes macros
 - A Turing Machine representation, which may be executed.
 - A compiler/interpreter that converts ATML/TML programs into a concrete TM instance in go  
 - other features are on the way!
