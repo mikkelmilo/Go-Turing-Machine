@@ -3,21 +3,18 @@ package main
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/mikkelmilo/Go-Turing-Machine/parser/TM-Language"
+	"io/ioutil"
 )
 
 func main() {
 	// Setup the input
-	is := antlr.NewInputStream("" +
-		"/* test comment */\n" +
-		"// another comment\n" +
-		"(hs,a,_,1,>)\n" +
-		"define macro testMacro {\n" +
-		"(a,b,2,1,<)\n" +
-		"}\n" +
-		"(b, 0)testMacro(b,a)\n" +
-		"(a,b,_,0,>)\n" +
-		"(b,ha,_,1,_)\n")
 
+	b, err := ioutil.ReadFile("tests/testmacro.txt") // just pass the file name
+	if err != nil {
+		panic(err)
+	}
+	str := string(b) // convert content to a 'string'
+	is := antlr.NewInputStream(str)
 	// Create the Lexer
 	lexer := parser.NewTMLLexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
@@ -36,5 +33,11 @@ func main() {
 		for _, err := range errListener.Errors {
 			println(err.Error())
 		}
+	}
+	var unfolder parser.TMLMacroUnfolder
+	pt.Walk(&unfolder, tree)
+	println("Program after unfolding:")
+	for _, c := range unfolder.Program {
+		println("(" + c.CurrentState + "," + c.NewState + "," + c.CurrentSymbol + "," + c.NewSymbol + "," + c.Direction + ")")
 	}
 }
