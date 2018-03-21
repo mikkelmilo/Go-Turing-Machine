@@ -124,6 +124,7 @@ type Command struct {
 
 // A TML Tree listener which constructs a sequential program from a given TML Tree by unfolding all macro definitions
 type TMLMacroUnfolder struct {
+	*BaseTMLListener
 	Program      []Command
 	macros       map[string][]Command //maps from the macro name to its list of tuples
 	currentMacro string
