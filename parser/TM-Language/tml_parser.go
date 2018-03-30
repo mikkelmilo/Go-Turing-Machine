@@ -10,7 +10,7 @@ import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 )
 
-// Suppress unused import Errors
+// Suppress unused import errors
 var _ = fmt.Printf
 var _ = reflect.Copy
 var _ = strconv.Itoa
@@ -844,13 +844,48 @@ type ICommandContext interface {
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
+	// GetCurrentState returns the currentState rule contexts.
+	GetCurrentState() IStateLabelContext
+
+	// GetNewState returns the newState rule contexts.
+	GetNewState() IStateLabelContext
+
+	// GetCurrentSymbol returns the currentSymbol rule contexts.
+	GetCurrentSymbol() ITapeSymbolContext
+
+	// GetNewSymbol returns the newSymbol rule contexts.
+	GetNewSymbol() ITapeSymbolContext
+
+	// GetDir returns the dir rule contexts.
+	GetDir() IDirectionContext
+
+	// SetCurrentState sets the currentState rule contexts.
+	SetCurrentState(IStateLabelContext)
+
+	// SetNewState sets the newState rule contexts.
+	SetNewState(IStateLabelContext)
+
+	// SetCurrentSymbol sets the currentSymbol rule contexts.
+	SetCurrentSymbol(ITapeSymbolContext)
+
+	// SetNewSymbol sets the newSymbol rule contexts.
+	SetNewSymbol(ITapeSymbolContext)
+
+	// SetDir sets the dir rule contexts.
+	SetDir(IDirectionContext)
+
 	// IsCommandContext differentiates from other interfaces.
 	IsCommandContext()
 }
 
 type CommandContext struct {
 	*antlr.BaseParserRuleContext
-	parser antlr.Parser
+	parser        antlr.Parser
+	currentState  IStateLabelContext
+	newState      IStateLabelContext
+	currentSymbol ITapeSymbolContext
+	newSymbol     ITapeSymbolContext
+	dir           IDirectionContext
 }
 
 func NewEmptyCommandContext() *CommandContext {
@@ -875,8 +910,40 @@ func NewCommandContext(parser antlr.Parser, parent antlr.ParserRuleContext, invo
 
 func (s *CommandContext) GetParser() antlr.Parser { return s.parser }
 
+func (s *CommandContext) GetCurrentState() IStateLabelContext { return s.currentState }
+
+func (s *CommandContext) GetNewState() IStateLabelContext { return s.newState }
+
+func (s *CommandContext) GetCurrentSymbol() ITapeSymbolContext { return s.currentSymbol }
+
+func (s *CommandContext) GetNewSymbol() ITapeSymbolContext { return s.newSymbol }
+
+func (s *CommandContext) GetDir() IDirectionContext { return s.dir }
+
+func (s *CommandContext) SetCurrentState(v IStateLabelContext) { s.currentState = v }
+
+func (s *CommandContext) SetNewState(v IStateLabelContext) { s.newState = v }
+
+func (s *CommandContext) SetCurrentSymbol(v ITapeSymbolContext) { s.currentSymbol = v }
+
+func (s *CommandContext) SetNewSymbol(v ITapeSymbolContext) { s.newSymbol = v }
+
+func (s *CommandContext) SetDir(v IDirectionContext) { s.dir = v }
+
 func (s *CommandContext) LPAREN() antlr.TerminalNode {
 	return s.GetToken(TMLParserLPAREN, 0)
+}
+
+func (s *CommandContext) AllCOMMA() []antlr.TerminalNode {
+	return s.GetTokens(TMLParserCOMMA)
+}
+
+func (s *CommandContext) COMMA(i int) antlr.TerminalNode {
+	return s.GetToken(TMLParserCOMMA, i)
+}
+
+func (s *CommandContext) RPAREN() antlr.TerminalNode {
+	return s.GetToken(TMLParserRPAREN, 0)
 }
 
 func (s *CommandContext) AllStateLabel() []IStateLabelContext {
@@ -900,14 +967,6 @@ func (s *CommandContext) StateLabel(i int) IStateLabelContext {
 	}
 
 	return t.(IStateLabelContext)
-}
-
-func (s *CommandContext) AllCOMMA() []antlr.TerminalNode {
-	return s.GetTokens(TMLParserCOMMA)
-}
-
-func (s *CommandContext) COMMA(i int) antlr.TerminalNode {
-	return s.GetToken(TMLParserCOMMA, i)
 }
 
 func (s *CommandContext) AllTapeSymbol() []ITapeSymbolContext {
@@ -941,10 +1000,6 @@ func (s *CommandContext) Direction() IDirectionContext {
 	}
 
 	return t.(IDirectionContext)
-}
-
-func (s *CommandContext) RPAREN() antlr.TerminalNode {
-	return s.GetToken(TMLParserRPAREN, 0)
 }
 
 func (s *CommandContext) GetRuleContext() antlr.RuleContext {
@@ -994,7 +1049,10 @@ func (p *TMLParser) Command() (localctx ICommandContext) {
 	}
 	{
 		p.SetState(56)
-		p.StateLabel()
+
+		var _x = p.StateLabel()
+
+		localctx.(*CommandContext).currentState = _x
 	}
 	{
 		p.SetState(57)
@@ -1002,7 +1060,10 @@ func (p *TMLParser) Command() (localctx ICommandContext) {
 	}
 	{
 		p.SetState(58)
-		p.StateLabel()
+
+		var _x = p.StateLabel()
+
+		localctx.(*CommandContext).newState = _x
 	}
 	{
 		p.SetState(59)
@@ -1010,7 +1071,10 @@ func (p *TMLParser) Command() (localctx ICommandContext) {
 	}
 	{
 		p.SetState(60)
-		p.TapeSymbol()
+
+		var _x = p.TapeSymbol()
+
+		localctx.(*CommandContext).currentSymbol = _x
 	}
 	{
 		p.SetState(61)
@@ -1018,7 +1082,10 @@ func (p *TMLParser) Command() (localctx ICommandContext) {
 	}
 	{
 		p.SetState(62)
-		p.TapeSymbol()
+
+		var _x = p.TapeSymbol()
+
+		localctx.(*CommandContext).newSymbol = _x
 	}
 	{
 		p.SetState(63)
@@ -1026,7 +1093,10 @@ func (p *TMLParser) Command() (localctx ICommandContext) {
 	}
 	{
 		p.SetState(64)
-		p.Direction()
+
+		var _x = p.Direction()
+
+		localctx.(*CommandContext).dir = _x
 	}
 	{
 		p.SetState(65)

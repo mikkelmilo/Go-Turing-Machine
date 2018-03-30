@@ -62,11 +62,11 @@ macroDef
 
 command
 	:	LPAREN
-			stateLabel COMMA
-			stateLabel COMMA
-			tapeSymbol COMMA
-			tapeSymbol COMMA
-			direction
+			currentState=stateLabel COMMA
+			newState=stateLabel COMMA
+			currentSymbol=tapeSymbol COMMA
+			newSymbol=tapeSymbol COMMA
+			dir=direction
 		RPAREN
 	;
 

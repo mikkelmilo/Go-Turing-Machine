@@ -11,19 +11,19 @@ import (
 	"strings"
 )
 
-type syntaxError struct {
+type TMLError struct {
 	line   int
 	column int
 	msg    string
 }
 
-func (s syntaxError) String() string {
+func (s TMLError) String() string {
 	line_str := strconv.Itoa(s.line)
 	column_str := strconv.Itoa(s.column)
 	return s.msg + " in line " + line_str + ", column " + column_str
 }
 
-func (s syntaxError) Error() string {
+func (s TMLError) Error() string {
 	return s.String()
 }
 
@@ -91,12 +91,12 @@ func (t *TMLTreePrinterListener) ExitCommand(c *CommandContext) {
 }
 
 type TMLerrorListener struct {
-	Errors []syntaxError
+	Errors []TMLError
 }
 
 func (el *TMLerrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{},
 	line, column int, msg string, e antlr.RecognitionException) {
-	el.Errors = append(el.Errors, syntaxError{line: line, column: column, msg: msg})
+	el.Errors = append(el.Errors, TMLError{line: line, column: column, msg: msg})
 }
 
 // we assert this never happens because this is inherently a property of the grammar, not the specific instance.
