@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 )
 
@@ -10,12 +11,13 @@ import (
  *    - the program contains hs, ha, and hr states
  *    - all states must be reachable from hs (the same is true for macros and their states)
  *    - macros must also contain hs, ha, and hr states
- *    - warnings will be produced (if enabled) if there are unbreakable cycles, ie.
- *      cycles which has no sequence of transitions to either ha or hr
+ *    - Nice-to-have: warnings will be produced (if enabled) if there are unbreakable cycles, ie.
+ *      Nice-to-have: cycles which have no sequence of transitions to either ha or hr
  */
 
 type TMLSemanticChecker interface {
-	Check(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
+	CheckAST(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
+	CheckSequentialProgram(program []Command) (error, []int)
 }
 
 func NewTMLBaseSemanticChecker() TMLBaseSemanticChecker {
@@ -25,7 +27,7 @@ func NewTMLBaseSemanticChecker() TMLBaseSemanticChecker {
 type TMLBaseSemanticChecker struct {
 }
 
-func (semant *TMLBaseSemanticChecker) Check(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
+func (semant *TMLBaseSemanticChecker) CheckAST(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
 	walker := semantTreeListener{}
 	pt.Walk(&walker, tree)
 	return walker.errors
@@ -187,4 +189,63 @@ func (semant *semantTreeListener) AppendErrorMsg(msg string, c antlr.Token) {
 			line:   c.GetLine(),
 			msg:    msg,
 		})
+}
+
+/*
+	Checks a TML program (in sequential form) for the following reachability properties:
+	The accept and reject states must be reachable from the start state (all of which are assumed to exist in the given input)
+	Furthermore, it returns a list of indices into the program list where it holds that the current state of the command is unreachable.
+*/
+func (semant *TMLBaseSemanticChecker) CheckSequentialProgram(program []Command) (error, []int) {
+	visited := make([]bool, len(program))
+	for i, _ := range visited {
+		visited[i] = false
+	}
+
+	startIndex := -1
+	for i, c := range program {
+		if c.CurrentState == "hs" {
+			startIndex = i
+			break
+		}
+	}
+	if startIndex == -1 {
+		panic("Unexpected situation: start state not found in program while performing state reachability analysis")
+	}
+	remaining := []int{startIndex} // a list of currently marked nodes whose lambda closure has not yet been found
+
+	for len(remaining) != 0 {
+		i := remaining[len(remaining)-1] // take out last element in 'remaining'
+		visited[i] = true
+		remaining = remaining[0 : len(remaining)-1] //shrink array by one - ie remove last element
+		next := program[i].NewState
+		// search for all occurances of the newState as 'currentState' in other commands
+		// then add these to the remaining list
+		for j, c := range program {
+			if c.CurrentState == next {
+				remaining = append(remaining, j)
+			}
+		}
+	}
+
+	// check if both accept and reject states were reachable from the start state. If not, return an error.
+	for i, isVisited := range visited {
+		if !isVisited && program[i].NewState == "ha" {
+			err := errors.New("The accept state is not reachable from the start state")
+			return err, nil
+		}
+		if !isVisited && program[i].NewState == "hr" {
+			err := errors.New("The reject state is not reachable from the start state")
+			return err, nil
+		}
+	}
+
+	// else if no errors return all those indices (in program) that have not been visited
+	result := []int{}
+	for i, isVisited := range visited {
+		if !isVisited {
+			result = append(result, i)
+		}
+	}
+	return nil, result
 }
