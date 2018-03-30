@@ -5,14 +5,13 @@ The language supports macros, which are lightweight functions that take no argum
 
 This project consists of the following components:
 - TML: a declarative programming language for specifying Turing Machines, including support for macros
-- ATML: anextension of TML which includes macros
 - A Turing Machine representation, which may be executed.
-- A compiler/interpreter that converts ATML/TML programs into a concrete TM instance in go  
+- A compiler/interpreter that converts TML programs into a concrete TM instance in go  
 - other features are on the way!
 
 ## !UPDATE!
 I'm reviving this project! Expect lots of improvements, clean-ups, refactoring, and new stuff!
-See the issues tab for my current TODO-list.
+See the issues tab for my current TODO-list and for progress updates.
 
 ## An example
 The following illustrates a program written in my Turing Machine Language (TML), and how to interpret this program using my TM implementation.
@@ -28,11 +27,7 @@ Save this in a file called 'test'.
 ```golang
 func main() {
 	// interprets the file and creates a TM ready to execute the program
-	err, tm := TML.Interpret("test") 
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	_, tm := TML.Interpret("test") 
 	go func() {
 		tm.Run(c, quit) // run the TM in a separate goroutine
 	}()
@@ -58,4 +53,4 @@ Tape:
 ```
 The brackets around the 1 in the tape indicate that the tape head currently points at this element. 
 
-If you want to see more involved programs, see the examples in examples/ExamplePrograms.go. There is for example a TM which emulates the increment function on binary numbers. Note that the TM "programs" in ExamplePrograms.go are not written in TML. They are implemented using the functions provided by the TM package; TM.AddTransition(...), etc. For a fun exercise, try to convert these programs into TML programs. It should be rather straight-forward.
+If you want to see more involved programs, see the examples in examples/ExamplePrograms.go. There is, for example, a TM which emulates the increment function on binary numbers. Note that the TM "programs" in ExamplePrograms.go are not written in TML. They are implemented using the functions provided by the TM package; TM.AddTransition(...), etc. For a fun exercise, try to convert these programs into TML programs. It should be a rather straight-forward, purely syntactical exercise.
