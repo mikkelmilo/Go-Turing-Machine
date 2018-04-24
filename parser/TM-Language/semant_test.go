@@ -4,6 +4,7 @@ import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/mikkelmilo/Go-Turing-Machine/parser/TM-Language"
 	"github.com/stretchr/testify/assert"
+	"github.com/twmb/algoimpl/go/graph"
 	"testing"
 )
 
@@ -23,8 +24,7 @@ func TestNewTMLBaseSemanticCheckerOnOnlyStartTransitionProgram(t *testing.T) {
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 
-	semant := parser.NewTMLBaseSemanticChecker()
-	errors := semant.CheckAST(pt, tree)
+	errors := parser.CheckSemantic(pt, tree)
 	assert.Len(t, errors, 2, "Expected two errors but got something else (1 error for missing accept state, and one for missing reject state")
 }
 
@@ -34,8 +34,7 @@ func TestNewTMLBaseSemanticCheckerOnMultipleStartStates(t *testing.T) {
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 
-	semant := parser.NewTMLBaseSemanticChecker()
-	errors := semant.CheckAST(pt, tree)
+	errors := parser.CheckSemantic(pt, tree)
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -44,9 +43,7 @@ func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStates(t *testing.T) {
 		"(hs,a,_,1,>)(hr,a,_,1,>)" //all special states are necessary so we add these to prevent errors unrelated to this test
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
-
-	semant := parser.NewTMLBaseSemanticChecker()
-	errors := semant.CheckAST(pt, tree)
+	errors := parser.CheckSemantic(pt, tree)
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -61,9 +58,7 @@ func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStatesInMacro(t *testing.T) {
 			"}"
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
-
-	semant := parser.NewTMLBaseSemanticChecker()
-	errors := semant.CheckAST(pt, tree)
+	errors := parser.CheckSemantic(pt, tree)
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -79,11 +74,11 @@ func TestNewTMLBaseSemanticCheckerOnMissingMacroStates(t *testing.T) {
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 
-	semant := parser.NewTMLBaseSemanticChecker()
-	errors := semant.CheckAST(pt, tree)
+	errors := parser.CheckSemantic(pt, tree)
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
+/*
 func TestTMLBaseSemanticChecker_CheckSequentialProgram(t *testing.T) {
 	program := []parser.Command{
 		parser.Command{CurrentState: "hs", NewState: "a"},
@@ -123,4 +118,31 @@ func TestTMLBaseSemanticChecker_CheckSequentialProgram_unreachable_ha(t *testing
 	err, unreachable_indices := semant.CheckSequentialProgram(program)
 	assert.NotNil(t, err, "expected an error but got none")
 	assert.Nil(t, unreachable_indices)
+}
+*/
+
+func TestFindUnreachableNodes(t *testing.T) {
+	g := graph.New(graph.Directed)
+	nodes := make(map[string]graph.Node, 0)
+	nodes["hs"] = g.MakeNode()
+	*nodes["hs"].Value = "hs"
+	nodes["hr"] = g.MakeNode()
+	*nodes["hr"].Value = "hr"
+	nodes["ha"] = g.MakeNode()
+	*nodes["ha"].Value = "ha"
+	nodes["a"] = g.MakeNode()
+	*nodes["a"].Value = "a"
+	nodes["b"] = g.MakeNode()
+	*nodes["b"].Value = "b"
+	nodes["c"] = g.MakeNode()
+	*nodes["c"].Value = "c"
+
+	g.MakeEdge(nodes["hs"], nodes["a"])
+	g.MakeEdge(nodes["a"], nodes["hr"])
+	g.MakeEdge(nodes["a"], nodes["ha"])
+	g.MakeEdge(nodes["b"], nodes["c"]) // b and c are unreachable
+	g.MakeEdge(nodes["c"], nodes["a"])
+
+	unreachables := parser.FindUnreachableNodes(*g, nodes)
+	assert.Len(t, unreachables, 2)
 }

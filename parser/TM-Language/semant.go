@@ -3,34 +3,101 @@ package parser
 import (
 	"errors"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/twmb/algoimpl/go/graph"
 )
 
 /*
  * This file contains a Tree walker which checks the semantics of the program.
  * This includes:
  *    - the program contains hs, ha, and hr states
- *    - all states must be reachable from hs (the same is true for macros and their states)
- *    - macros must also contain hs, ha, and hr states
+ *    - all states must be reachable from hs (the same is true for Macros and their states)
+ *    - Macros must also contain hs, ha, and hr states
  *    - Nice-to-have: warnings will be produced (if enabled) if there are unbreakable cycles, ie.
  *      Nice-to-have: cycles which have no sequence of transitions to either ha or hr
  */
 
-type TMLSemanticChecker interface {
-	CheckAST(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
-	CheckSequentialProgram(program []Command) (error, []int)
-}
+type semanticChecker = func(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
 
-func NewTMLBaseSemanticChecker() TMLBaseSemanticChecker {
-	return TMLBaseSemanticChecker{}
-}
+func CheckSemantic(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
 
-type TMLBaseSemanticChecker struct {
-}
-
-func (semant *TMLBaseSemanticChecker) CheckAST(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
+	// first walk the concrete syntax tree and report any errors found
 	walker := semantTreeListener{}
 	pt.Walk(&walker, tree)
-	return walker.errors
+
+	if len(walker.errors) != 0 {
+		return walker.errors
+	}
+
+	// if no errors were found in the tree walk above, check for reachability properties of hs, ha, and hr (in both main program and macros)
+	var unfolder TMLMacroUnfolder
+	pt.Walk(&unfolder, tree)
+
+	// for each local macro, check reachability of nodes and report and error if there are any.
+	for macroname, m := range unfolder.Macros {
+		g := graph.New(graph.Directed)
+		nodes := make(map[string]graph.Node, 0)
+
+		// make nodes for each state in the command list
+		for _, c := range m {
+			nodes[c.CurrentState] = g.MakeNode()
+			*nodes[c.CurrentState].Value = c.CurrentState
+			nodes[c.NewState] = g.MakeNode()
+			*nodes[c.NewState].Value = c.NewState
+		}
+		// add edges
+		for _, c := range m {
+			g.MakeEdge(nodes[c.CurrentState], nodes[c.NewState])
+		}
+		// find unreachable states
+		unreachables := FindUnreachableNodes(*g, nodes)
+		errs := make([]TMLError, len(unreachables))
+		for i, n := range unreachables {
+			errs[i] = TMLError{msg: "state " + (*n.Value).(string) + " is unreachable in macro: " + macroname}
+		}
+		if len(errs) != 0 {
+			return errs
+		}
+	}
+	//TODO: build main program graph and check for unreachable nodes in it.
+	return nil
+}
+
+//TODO: implement. make a node for each normal command, and add edges between nodes in macro applications.
+func BuildMainProgramGraph(pt *antlr.ParseTreeWalker, tree IStartContext) ([]graph.Node, graph.Graph) {
+	return nil, graph.Graph{}
+
+	//make a treelistener implementation which traverses the concrete syntax tree and does as described above.
+}
+
+func FindUnreachableNodes(g graph.Graph, nodes map[string]graph.Node) []graph.Node {
+	visited := make(map[graph.Node]bool)
+	for _, n := range nodes {
+		visited[n] = false
+	}
+	visited[nodes["hs"]] = true
+	remaining := g.Neighbors(nodes["hs"])
+
+	for len(remaining) != 0 {
+		// take out last node in remaining list
+		n := remaining[len(remaining)-1]
+		visited[n] = true                        // add this node as visited
+		remaining = remaining[:len(remaining)-1] // remove last element
+
+		// for each of the neighbours of n, add them to remaining list
+		// only if they haven't already been visited
+		for _, neighbour := range g.Neighbors(n) {
+			if !visited[neighbour] {
+				remaining = append(remaining, neighbour)
+			}
+		}
+	}
+	unvisited := make([]graph.Node, 0)
+	for n, was_visited := range visited {
+		if !was_visited {
+			unvisited = append(unvisited, n)
+		}
+	}
+	return unvisited
 }
 
 type semantTreeListener struct {
@@ -44,19 +111,13 @@ type semantTreeListener struct {
 	rejectStateChanged bool
 }
 
-func (semant *semantTreeListener) EnterEveryRule(ctx antlr.ParserRuleContext) {
-}
-
 func (semant *semantTreeListener) VisitTerminal(node antlr.TerminalNode) {
 }
-
 func (semant *semantTreeListener) VisitErrorNode(node antlr.ErrorNode) {
 }
-
-func (semant *semantTreeListener) ExitEveryRule(ctx antlr.ParserRuleContext) {
+func (semant *semantTreeListener) EnterEveryRule(ctx antlr.ParserRuleContext) {
 }
-
-func (semant *semantTreeListener) EnterStart(c *StartContext) {
+func (semant *semantTreeListener) ExitEveryRule(ctx antlr.ParserRuleContext) {
 }
 
 func (semant *semantTreeListener) EnterProgram(c *ProgramContext) {
@@ -69,12 +130,6 @@ func (semant *semantTreeListener) EnterProgram(c *ProgramContext) {
 	semant.acceptStateChanged = false
 	semant.startStateChanged = false
 	semant.rejectStateChanged = false
-}
-
-func (semant *semantTreeListener) EnterStatement(c *StatementContext) {
-}
-
-func (semant *semantTreeListener) EnterMacroApp(c *MacroAppContext) {
 }
 
 func (semant *semantTreeListener) EnterMacroDef(c *MacroDefContext) {
@@ -120,18 +175,6 @@ func (semant *semantTreeListener) EnterCommand(c *CommandContext) {
 
 }
 
-func (semant *semantTreeListener) EnterStateLabel(c *StateLabelContext) {
-}
-
-func (semant *semantTreeListener) EnterTapeSymbol(c *TapeSymbolContext) {
-}
-
-func (semant *semantTreeListener) EnterDirection(c *DirectionContext) {
-}
-
-func (semant *semantTreeListener) ExitStart(c *StartContext) {
-}
-
 func (semant *semantTreeListener) ExitProgram(c *ProgramContext) {
 	// check if the main TM contained a start, accept, and reject state. If not, report an error for each missing state.
 	if !semant.seenStartState {
@@ -143,12 +186,6 @@ func (semant *semantTreeListener) ExitProgram(c *ProgramContext) {
 	if !semant.seenRejectState {
 		semant.AppendErrorMsg("Missing reject state", c.GetStart())
 	}
-}
-
-func (semant *semantTreeListener) ExitStatement(c *StatementContext) {
-}
-
-func (semant *semantTreeListener) ExitMacroApp(c *MacroAppContext) {
 }
 
 func (semant *semantTreeListener) ExitMacroDef(c *MacroDefContext) {
@@ -169,19 +206,6 @@ func (semant *semantTreeListener) ExitMacroDef(c *MacroDefContext) {
 	semant.seenRejectState = semant.rejectStateChanged
 }
 
-func (semant *semantTreeListener) ExitCommand(c *CommandContext) {
-}
-
-func (semant *semantTreeListener) ExitStateLabel(c *StateLabelContext) {
-}
-
-func (semant *semantTreeListener) ExitTapeSymbol(c *TapeSymbolContext) {
-}
-
-func (semant *semantTreeListener) ExitDirection(c *DirectionContext) {
-
-}
-
 func (semant *semantTreeListener) AppendErrorMsg(msg string, c antlr.Token) {
 	semant.errors = append(semant.errors,
 		TMLError{
@@ -196,7 +220,7 @@ func (semant *semantTreeListener) AppendErrorMsg(msg string, c antlr.Token) {
 	The accept and reject states must be reachable from the start state (all of which are assumed to exist in the given input)
 	Furthermore, it returns a list of indices into the program list where it holds that the current state of the command is unreachable.
 */
-func (semant *TMLBaseSemanticChecker) CheckSequentialProgram(program []Command) (error, []int) {
+func CheckReachability(program []Command) (error, []int) {
 	visited := make([]bool, len(program))
 	for i, _ := range visited {
 		visited[i] = false

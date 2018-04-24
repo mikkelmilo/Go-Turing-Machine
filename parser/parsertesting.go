@@ -40,4 +40,11 @@ func main() {
 	for _, c := range unfolder.Program {
 		println("(" + c.CurrentState + "," + c.NewState + "," + c.CurrentSymbol + "," + c.NewSymbol + "," + c.Direction + ")")
 	}
+	println("-----------------------")
+	for name, m := range unfolder.Macros {
+		println("macro " + name + ":")
+		for _, c := range m {
+			println("(" + c.CurrentState + "," + c.NewState + "," + c.CurrentSymbol + "," + c.NewSymbol + "," + c.Direction + ")")
+		}
+	}
 }

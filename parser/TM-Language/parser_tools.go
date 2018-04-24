@@ -126,14 +126,14 @@ type Command struct {
 type TMLMacroUnfolder struct {
 	*BaseTMLListener
 	Program      []Command
-	macros       map[string][]Command //maps from the macro name to its list of tuples
+	Macros       map[string][]Command //maps from the macro name to its list of tuples
 	currentMacro string
 	uniqueNr     int
 }
 
 func (t *TMLMacroUnfolder) EnterProgram(c *ProgramContext) {
 	t.Program = make([]Command, 0)
-	t.macros = make(map[string][]Command)
+	t.Macros = make(map[string][]Command)
 	t.currentMacro = ""
 	t.uniqueNr = 0
 }
@@ -178,7 +178,7 @@ func (t *TMLMacroUnfolder) EnterMacroApp(c *MacroAppContext) {
 	// append these commands to the program
 	t.Program = append(t.Program, macro_hs_trans, macro_ha_trans, macro_hr_trans)
 	// generate the macro commands with unique state names
-	macroCommands := t.GenerateUniqueStates(t.macros[macroName], macroName, t.uniqueNr)
+	macroCommands := t.GenerateUniqueStates(t.Macros[macroName], macroName, t.uniqueNr)
 	t.uniqueNr++
 	// append the macro to the program
 	t.Program = append(t.Program, macroCommands...)
@@ -200,11 +200,11 @@ func (t *TMLMacroUnfolder) EnterCommand(c *CommandContext) {
 		NewSymbol:     elems[3],
 		Direction:     elems[4],
 	}
-	// if we are not in a macro definition, add to t.Program list, else add to t.macros[t.currentMacro]
+	// if we are not in a macro definition, add to t.Program list, else add to t.Macros[t.currentMacro]
 	if t.currentMacro == "" {
 		t.Program = append(t.Program, cm)
 	} else {
-		t.macros[t.currentMacro] = append(t.macros[t.currentMacro], cm)
+		t.Macros[t.currentMacro] = append(t.Macros[t.currentMacro], cm)
 	}
 }
 
