@@ -37,14 +37,14 @@ type Transition struct {
 	dir       uint8
 }
 
-func (t Transition) String(alphabetMap map[string]uint8) string {
+func (t Transition) asString(alphabetMap map[string]uint8) string {
 	inv_map := getInverseAlphabetMapping(alphabetMap)
 	return "(" +
 		t.CurState.String() +
 		"," + t.NewState.String() +
 		"," + inv_map[t.curSymbol] +
 		"," + inv_map[t.newSymbol] +
-		"," + fmt.Sprintf("%c", t.dir) + ")"
+		"," + string(t.dir) + ")"
 }
 
 type TMListener interface {
@@ -81,15 +81,15 @@ type TM struct {
  * NewTM constructs a TM from the specified alphabet, and optional initial tape.
  * @precondition: max alphabet size is 251
  */
-func NewTM(alphabet []string, s []string) (error, TM) {
+func NewTM(alphabet []string, startTape []string) (error, TM) {
 	tm := TM{}
 
 	if alphabet == nil {
-		return errors.New("Alphabet must be different from nil"), tm
+		return errors.New("alphabet must be different from nil"), tm
 	}
 	// report an error on too large alphabet (> 253)
 	if len(alphabet) > 251 {
-		return fmt.Errorf("Alphabet size too large. Maximal size: 251. Got: %v", len(alphabet)), tm
+		return fmt.Errorf("alphabet size too large. Maximal size: 251. Got: %v", len(alphabet)), tm
 	}
 	// build alphabet map to uint8 on which the TM will operate
 	// uint8 values 95, 60, 62, 123, and 125 are reserved.
@@ -115,18 +115,18 @@ func NewTM(alphabet []string, s []string) (error, TM) {
 
 	tm.Head = 0
 	// initially, set tape to an array of either two 'Empty' elements,
-	// or if a tape was given, set tape to [Empty :: s]
+	// or if a tape was given, set tape to [Empty :: startTape]
 	var len_s int
-	if s == nil {
+	if startTape == nil {
 		len_s = 0
 	} else {
-		len_s = len(s)
+		len_s = len(startTape)
 	}
-	if s != nil && len_s != 0 {
+	if startTape != nil && len_s != 0 {
 		// translate given tape to type []uint8 and append
 		s_trans := make([]uint8, len_s+1)
 		s_trans[0] = Empty
-		for i, elem := range s {
+		for i, elem := range startTape {
 			s_trans[i+1] = alphabetMap[elem]
 		}
 		tm.Tape = s_trans
@@ -255,12 +255,12 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 		if t.CurState == s && t.curSymbol == symbol {
 			tm.CurrentState = t.NewState
 			tm.Tape[tm.Head] = t.newSymbol
-			if t.dir == One {
+			if t.dir == Right {
 				tm.Head++
 				if tm.Head >= len(tm.Tape) {
 					tm.Tape = expandTape(tm.Tape)
 				}
-			} else if t.dir == Zero {
+			} else if t.dir == Left {
 				if tm.Head <= 0 {
 					return fmt.Errorf("tried to move < out of bounds")
 				}
@@ -271,7 +271,7 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 		}
 	}
 	if found == false && tm.CurrentState != tm.AcceptState {
-		return fmt.Errorf("no transitions found on state %s with symbol %c", s.Name, symbol)
+		return fmt.Errorf("no transitions found on state %s with symbol %v", s.Name, symbol)
 	}
 	return nil
 }
@@ -289,9 +289,9 @@ func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, 
 
 	var cdir uint8
 	if dir == "<" {
-		cdir = Zero
+		cdir = Left
 	} else if dir == ">" {
-		cdir = One
+		cdir = Right
 	} else if dir == "_" {
 		cdir = Empty
 	} else {
@@ -317,6 +317,11 @@ func (tm *TM) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
 
+// SetRejectState set the reject state
+func (tm *TM) SetRejctState(s *State) {
+	tm.RejectState = s
+}
+
 func (tm *TM) String() string {
 	// convert tape into an array of characters from the alphabet
 	tape_formatted := make([]string, len(tm.Tape))
@@ -332,7 +337,7 @@ func (tm *TM) String() string {
 	transitions_string := func(t []Transition) string {
 		str := "["
 		for _, trans := range t {
-			str = str + trans.String(tm.AlphabetMap) + ","
+			str = str + trans.asString(tm.AlphabetMap) + ","
 		}
 		str = str[0 : len(str)-1] // trim last ','
 		str = str + "]"
