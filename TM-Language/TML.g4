@@ -45,13 +45,13 @@ statement
 
 macroApp
 	:	LPAREN
-			stateLabel COMMA
+			enteringState=stateLabel COMMA
 			tapeSymbol
 		RPAREN
 		ID
 		LPAREN
-			stateLabel COMMA
-			stateLabel
+			acceptState=stateLabel COMMA
+			rejectState=stateLabel
 		RPAREN
 	;
 

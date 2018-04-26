@@ -495,13 +495,34 @@ type IMacroAppContext interface {
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
+	// GetEnteringState returns the enteringState rule contexts.
+	GetEnteringState() IStateLabelContext
+
+	// GetAcceptState returns the acceptState rule contexts.
+	GetAcceptState() IStateLabelContext
+
+	// GetRejectState returns the rejectState rule contexts.
+	GetRejectState() IStateLabelContext
+
+	// SetEnteringState sets the enteringState rule contexts.
+	SetEnteringState(IStateLabelContext)
+
+	// SetAcceptState sets the acceptState rule contexts.
+	SetAcceptState(IStateLabelContext)
+
+	// SetRejectState sets the rejectState rule contexts.
+	SetRejectState(IStateLabelContext)
+
 	// IsMacroAppContext differentiates from other interfaces.
 	IsMacroAppContext()
 }
 
 type MacroAppContext struct {
 	*antlr.BaseParserRuleContext
-	parser antlr.Parser
+	parser        antlr.Parser
+	enteringState IStateLabelContext
+	acceptState   IStateLabelContext
+	rejectState   IStateLabelContext
 }
 
 func NewEmptyMacroAppContext() *MacroAppContext {
@@ -526,35 +547,24 @@ func NewMacroAppContext(parser antlr.Parser, parent antlr.ParserRuleContext, inv
 
 func (s *MacroAppContext) GetParser() antlr.Parser { return s.parser }
 
+func (s *MacroAppContext) GetEnteringState() IStateLabelContext { return s.enteringState }
+
+func (s *MacroAppContext) GetAcceptState() IStateLabelContext { return s.acceptState }
+
+func (s *MacroAppContext) GetRejectState() IStateLabelContext { return s.rejectState }
+
+func (s *MacroAppContext) SetEnteringState(v IStateLabelContext) { s.enteringState = v }
+
+func (s *MacroAppContext) SetAcceptState(v IStateLabelContext) { s.acceptState = v }
+
+func (s *MacroAppContext) SetRejectState(v IStateLabelContext) { s.rejectState = v }
+
 func (s *MacroAppContext) AllLPAREN() []antlr.TerminalNode {
 	return s.GetTokens(TMLParserLPAREN)
 }
 
 func (s *MacroAppContext) LPAREN(i int) antlr.TerminalNode {
 	return s.GetToken(TMLParserLPAREN, i)
-}
-
-func (s *MacroAppContext) AllStateLabel() []IStateLabelContext {
-	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IStateLabelContext)(nil)).Elem())
-	var tst = make([]IStateLabelContext, len(ts))
-
-	for i, t := range ts {
-		if t != nil {
-			tst[i] = t.(IStateLabelContext)
-		}
-	}
-
-	return tst
-}
-
-func (s *MacroAppContext) StateLabel(i int) IStateLabelContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IStateLabelContext)(nil)).Elem(), i)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(IStateLabelContext)
 }
 
 func (s *MacroAppContext) AllCOMMA() []antlr.TerminalNode {
@@ -585,6 +595,29 @@ func (s *MacroAppContext) RPAREN(i int) antlr.TerminalNode {
 
 func (s *MacroAppContext) ID() antlr.TerminalNode {
 	return s.GetToken(TMLParserID, 0)
+}
+
+func (s *MacroAppContext) AllStateLabel() []IStateLabelContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IStateLabelContext)(nil)).Elem())
+	var tst = make([]IStateLabelContext, len(ts))
+
+	for i, t := range ts {
+		if t != nil {
+			tst[i] = t.(IStateLabelContext)
+		}
+	}
+
+	return tst
+}
+
+func (s *MacroAppContext) StateLabel(i int) IStateLabelContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IStateLabelContext)(nil)).Elem(), i)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IStateLabelContext)
 }
 
 func (s *MacroAppContext) GetRuleContext() antlr.RuleContext {
@@ -634,7 +667,10 @@ func (p *TMLParser) MacroApp() (localctx IMacroAppContext) {
 	}
 	{
 		p.SetState(32)
-		p.StateLabel()
+
+		var _x = p.StateLabel()
+
+		localctx.(*MacroAppContext).enteringState = _x
 	}
 	{
 		p.SetState(33)
@@ -658,7 +694,10 @@ func (p *TMLParser) MacroApp() (localctx IMacroAppContext) {
 	}
 	{
 		p.SetState(38)
-		p.StateLabel()
+
+		var _x = p.StateLabel()
+
+		localctx.(*MacroAppContext).acceptState = _x
 	}
 	{
 		p.SetState(39)
@@ -666,7 +705,10 @@ func (p *TMLParser) MacroApp() (localctx IMacroAppContext) {
 	}
 	{
 		p.SetState(40)
-		p.StateLabel()
+
+		var _x = p.StateLabel()
+
+		localctx.(*MacroAppContext).rejectState = _x
 	}
 	{
 		p.SetState(41)
