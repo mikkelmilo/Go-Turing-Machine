@@ -1,0 +1,18 @@
+/*test comment */
+// another comment
+
+(hs,a,_,1,>)
+define macro testMacro {
+	(hs,a,1,2,_)
+	(a,b,2,1,<)
+	(b,ha,1,1,_)
+	(b,hr,2,1,_)
+}
+
+(b, 0)testMacro(c,a)
+
+(c, 0)testMacro(a,b)
+
+
+(a,b,_,0,>)
+(b,ha,_,1,_)

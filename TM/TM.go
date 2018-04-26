@@ -5,27 +5,28 @@ import (
 	"fmt"
 )
 
-// State struct for representing a state in the TM
-type State struct {
-	Name string
-}
+const (
+	// One representation
+	One uint8 = 49
 
-func (s *State) String() string {
-	return s.Name
-}
+	// Zero representation
+	Zero uint8 = 48
 
-//TM a Turing Machine where the input- and output alphabets consist of 1 and 0.
-type TM struct {
-	StartState   *State
-	AcceptState  *State
-	RejectState  *State
-	CurrentState *State
-	Transitions  []Transition
-	Tape         []uint8
-	Head         int
-	Alphabet     []string
-	AlphabetMap  map[string]uint8
-}
+	//Empty underscore
+	Empty uint8 = 95
+
+	// LeftBracket representation
+	LeftBracket = 123
+
+	// RightBracket representation
+	RightBracket = 125
+
+	// Left arrow
+	Left = 60
+
+	// Right arrow
+	Right = 62
+)
 
 // Transition : a representation of a transition
 type Transition struct {
@@ -46,26 +47,35 @@ func (t Transition) String(alphabetMap map[string]uint8) string {
 		"," + fmt.Sprintf("%c", t.dir) + ")"
 }
 
-// One representation
-const One uint8 = 49
+type TMListener interface {
+	step(*TM)
+	haltedWithAccept(*TM)
+	haltedWithReject(*TM)
+	haltedWithError(*TM, error)
+}
 
-// Zero representation
-const Zero uint8 = 48
+// State struct for representing a state in the TM
+type State struct {
+	Name string
+}
 
-//Empty underscore
-const Empty uint8 = 95
+func (s *State) String() string {
+	return s.Name
+}
 
-// LeftBracket representation
-const LeftBracket = 123
-
-// RightBracket representation
-const RightBracket = 125
-
-// Left arrow
-const Left = 60
-
-// Right arrow
-const Right = 62
+//TM a Turing Machine where the input- and output alphabets consist of 1 and 0.
+type TM struct {
+	StartState   *State
+	AcceptState  *State
+	RejectState  *State
+	CurrentState *State
+	Transitions  []Transition
+	Tape         []uint8
+	Head         int
+	Alphabet     []string
+	AlphabetMap  map[string]uint8
+	listeners    []*TMListener
+}
 
 /*
  * NewTM constructs a TM from the specified alphabet, and optional initial tape.
@@ -124,7 +134,39 @@ func NewTM(alphabet []string, s []string) (error, TM) {
 		tm.Tape = []uint8{Empty, Empty}
 
 	}
+	//finally, initialize the list of listeners to be empty
+	tm.listeners = make([]*TMListener, 0)
 	return nil, tm
+}
+
+func (tm *TM) AddListener(l *TMListener) {
+	tm.listeners = append(tm.listeners, l)
+}
+
+/*
+	Removes all instances of a listener from the TM. Reports an error if listener is not found.
+*/
+func (tm *TM) RemoveListener(l *TMListener) error {
+	found := false
+	// remove all instances of this listener from the TM
+	for i, e := range tm.listeners {
+		if e == l {
+			found = true
+			tm.listeners = remove(tm.listeners, i)
+		}
+	}
+	// report error if listener does not exist.
+	if !found {
+		return errors.New("Listener not found!")
+	}
+	return nil
+}
+
+/*
+	Removes all listeners from the TM
+*/
+func (tm *TM) RemoveListeners() {
+	tm.listeners = make([]*TMListener, 0)
 }
 
 // TODO: this operation may be very expensive and possibly redundant as well
@@ -179,14 +221,32 @@ func (tm *TM) Step() error {
 		tm.CurrentState = tm.StartState
 
 	} else if tm.CurrentState == tm.AcceptState {
-		return errors.New("TM is already at the accept state and cannot make further transitions")
+		err := errors.New("TM is already at the accept state and cannot make further transitions")
+		for _, l := range tm.listeners {
+			(*l).haltedWithAccept(tm)
+		}
+		return err
 	} else if tm.CurrentState == tm.RejectState {
-		return errors.New("TM is already at the reject state and cannot make further transitions")
-	} else {
-		symbol := tm.Tape[tm.Head]
-		return tm.makeTransition(tm.CurrentState, symbol)
+		err := errors.New("TM is already at the reject state and cannot make further transitions")
+		for _, l := range tm.listeners {
+			(*l).haltedWithReject(tm)
+		}
+		return err
 	}
-	return nil
+
+	symbol := tm.Tape[tm.Head]
+	// try to make transition. Report error if failed, and notify listeners
+	err := tm.makeTransition(tm.CurrentState, symbol)
+	if err != nil {
+		for _, l := range tm.listeners {
+			(*l).haltedWithError(tm, err)
+		}
+	} else {
+		for _, l := range tm.listeners {
+			(*l).step(tm)
+		}
+	}
+	return err
 }
 
 func (tm *TM) makeTransition(s *State, symbol uint8) error {
@@ -316,4 +376,10 @@ func Insert(slice []string, index int, value string) []string {
 	r[index] = value
 	// Return the result.
 	return r
+}
+
+// removes an element from a list. Does not guarantee order.
+func remove(s []*TMListener, i int) []*TMListener {
+	s[len(s)-1], s[i] = s[i], s[len(s)-1]
+	return s[:len(s)-1]
 }

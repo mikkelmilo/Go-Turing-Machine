@@ -1,8 +1,0 @@
-ATML (name subject to change) MACROS
-(p_1, σ)M(p_2,p_3)
-if M ends in h_a go to p_2
-else if M ends in h_r go to p_3
-
-------------------------------------------------
-En TM starter i [_, {_},...]
-dvs. (hs, a, _, b, >) → [_, b, {_},...]
