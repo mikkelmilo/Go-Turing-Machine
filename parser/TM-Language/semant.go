@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"errors"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/twmb/algoimpl/go/graph"
 )
@@ -16,12 +15,12 @@ import (
  *      Nice-to-have: cycles which have no sequence of transitions to either ha or hr
  */
 
-type semanticChecker = func(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
+type SemanticChecker func(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
 
 func CheckSemantic(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
 
-	// first walk the concrete syntax tree and report any errors found
-	walker := semantTreeListener{}
+	// first walk the concrete syntax tree and report any parser errors found
+	var walker semantTreeListener
 	pt.Walk(&walker, tree)
 
 	if len(walker.errors) != 0 {
@@ -58,15 +57,20 @@ func CheckSemantic(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
 			return errs
 		}
 	}
-	//TODO: build main program graph and check for unreachable nodes in it.
+
+	// check the main program for reachability
+	var mainprogbuilder MainProgramGraphBuilder
+	pt.Walk(&mainprogbuilder, tree)
+
+	unreachables := FindUnreachableNodes(*mainprogbuilder.Graph, mainprogbuilder.Nodes)
+	errs := make([]TMLError, len(unreachables))
+	for i, n := range unreachables {
+		errs[i] = TMLError{msg: "state " + (*n.Value).(string) + " is unreachable in main program"}
+	}
+	if len(errs) != 0 {
+		return errs
+	}
 	return nil
-}
-
-//TODO: implement. make a node for each normal command, and add edges between nodes in macro applications.
-func BuildMainProgramGraph(pt *antlr.ParseTreeWalker, tree IStartContext) ([]graph.Node, graph.Graph) {
-	return nil, graph.Graph{}
-
-	//make a treelistener implementation which traverses the concrete syntax tree and does as described above.
 }
 
 func FindUnreachableNodes(g graph.Graph, nodes map[string]graph.Node) []graph.Node {
@@ -101,6 +105,7 @@ func FindUnreachableNodes(g graph.Graph, nodes map[string]graph.Node) []graph.No
 }
 
 type semantTreeListener struct {
+	*BaseTMLListener
 	errors             []TMLError
 	inMacro            bool
 	seenStartState     bool
@@ -109,15 +114,6 @@ type semantTreeListener struct {
 	startStateChanged  bool
 	acceptStateChanged bool
 	rejectStateChanged bool
-}
-
-func (semant *semantTreeListener) VisitTerminal(node antlr.TerminalNode) {
-}
-func (semant *semantTreeListener) VisitErrorNode(node antlr.ErrorNode) {
-}
-func (semant *semantTreeListener) EnterEveryRule(ctx antlr.ParserRuleContext) {
-}
-func (semant *semantTreeListener) ExitEveryRule(ctx antlr.ParserRuleContext) {
 }
 
 func (semant *semantTreeListener) EnterProgram(c *ProgramContext) {
@@ -141,38 +137,42 @@ func (semant *semantTreeListener) EnterMacroDef(c *MacroDefContext) {
 }
 
 func (semant *semantTreeListener) EnterCommand(c *CommandContext) {
-	switch c.GetCurrentState().GetText() {
-	case "hs":
-		if !semant.seenStartState {
-			semant.seenStartState = true
-			if !semant.inMacro {
-				semant.startStateChanged = true
+	check_command := func(state_name string, state_type string) {
+		switch state_name {
+		case "hs":
+			if !semant.seenStartState {
+				semant.seenStartState = true
+				if !semant.inMacro {
+					semant.startStateChanged = true
+				}
+			} else if state_type == "currentstate" {
+				// else if the current state symbol is the start state, but not the first one
+				// seen in this scope, add an error.
+				semant.AppendErrorMsg("Multiple start states defined", c.GetStart())
 			}
-		} else {
-			// else if the current state symbol is the start state, but not the first one
-			// seen in this scope, add an error.
-			semant.AppendErrorMsg("Multiple start states defined", c.GetStart())
-		}
-	case "ha":
-		if !semant.seenAcceptState {
-			semant.seenAcceptState = true
-			if !semant.inMacro {
-				semant.acceptStateChanged = true
+		case "ha":
+			if !semant.seenAcceptState {
+				semant.seenAcceptState = true
+				if !semant.inMacro {
+					semant.acceptStateChanged = true
+				}
+			} else if state_type == "currentstate" {
+				semant.AppendErrorMsg("Accept state cannot have transitions to other states", c.GetStart())
 			}
-		} else {
-			semant.AppendErrorMsg("Multiple accept states defined", c.GetStart())
-		}
-	case "hr":
-		if !semant.seenRejectState {
-			semant.seenRejectState = true
-			if !semant.inMacro {
-				semant.rejectStateChanged = true
+		case "hr":
+			if !semant.seenRejectState {
+				semant.seenRejectState = true
+				if !semant.inMacro {
+					semant.rejectStateChanged = true
+				}
+			} else if state_type == "currentstate" {
+				semant.AppendErrorMsg("Reject state cannot have transitions to other states", c.GetStart())
 			}
-		} else {
-			semant.AppendErrorMsg("Multiple reject states defined", c.GetStart())
 		}
 	}
 
+	check_command(c.GetCurrentState().GetText(), "currentstate")
+	check_command(c.GetNewState().GetText(), "newstate")
 }
 
 func (semant *semantTreeListener) ExitProgram(c *ProgramContext) {
@@ -213,63 +213,4 @@ func (semant *semantTreeListener) AppendErrorMsg(msg string, c antlr.Token) {
 			line:   c.GetLine(),
 			msg:    msg,
 		})
-}
-
-/*
-	Checks a TML program (in sequential form) for the following reachability properties:
-	The accept and reject states must be reachable from the start state (all of which are assumed to exist in the given input)
-	Furthermore, it returns a list of indices into the program list where it holds that the current state of the command is unreachable.
-*/
-func CheckReachability(program []Command) (error, []int) {
-	visited := make([]bool, len(program))
-	for i, _ := range visited {
-		visited[i] = false
-	}
-
-	startIndex := -1
-	for i, c := range program {
-		if c.CurrentState == "hs" {
-			startIndex = i
-			break
-		}
-	}
-	if startIndex == -1 {
-		panic("Unexpected situation: start state not found in program while performing state reachability analysis")
-	}
-	remaining := []int{startIndex} // a list of currently marked nodes whose lambda closure has not yet been found
-
-	for len(remaining) != 0 {
-		i := remaining[len(remaining)-1] // take out last element in 'remaining'
-		visited[i] = true
-		remaining = remaining[0 : len(remaining)-1] //shrink array by one - ie remove last element
-		next := program[i].NewState
-		// search for all occurances of the newState as 'currentState' in other commands
-		// then add these to the remaining list
-		for j, c := range program {
-			if c.CurrentState == next {
-				remaining = append(remaining, j)
-			}
-		}
-	}
-
-	// check if both accept and reject states were reachable from the start state. If not, return an error.
-	for i, isVisited := range visited {
-		if !isVisited && program[i].NewState == "ha" {
-			err := errors.New("The accept state is not reachable from the start state")
-			return err, nil
-		}
-		if !isVisited && program[i].NewState == "hr" {
-			err := errors.New("The reject state is not reachable from the start state")
-			return err, nil
-		}
-	}
-
-	// else if no errors return all those indices (in program) that have not been visited
-	result := []int{}
-	for i, isVisited := range visited {
-		if !isVisited {
-			result = append(result, i)
-		}
-	}
-	return nil, result
 }

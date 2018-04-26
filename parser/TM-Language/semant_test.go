@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"github.com/mikkelmilo/Go-Turing-Machine/parser/TM-Language"
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,7 @@ func setupParser(program_string string) (*parser.TMLParser, parser.IStartContext
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	// Create the Parser
 	p := parser.NewTMLParser(stream)
+	p.RemoveErrorListeners()
 	tree := p.Start()
 	return p, tree
 }
@@ -35,6 +37,7 @@ func TestNewTMLBaseSemanticCheckerOnMultipleStartStates(t *testing.T) {
 	pt := antlr.ParseTreeWalkerDefault
 
 	errors := parser.CheckSemantic(pt, tree)
+
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -44,6 +47,7 @@ func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStates(t *testing.T) {
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 	errors := parser.CheckSemantic(pt, tree)
+
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -59,6 +63,7 @@ func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStatesInMacro(t *testing.T) {
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 	errors := parser.CheckSemantic(pt, tree)
+
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -121,6 +126,62 @@ func TestTMLBaseSemanticChecker_CheckSequentialProgram_unreachable_ha(t *testing
 }
 */
 
+func TestCheckSemantic_unreachable_states(t *testing.T) {
+	program_string :=
+		"(hs,a,_,1,>)" +
+			"(a,b,_,1,>)" +
+			"(c,a,_,1,>)" + // c and hr are unreachable
+			"(c,hr,_,1,>)" +
+			"(a,ha,_,1,>)"
+	_, tree := setupParser(program_string)
+	pt := antlr.ParseTreeWalkerDefault
+
+	errors := parser.CheckSemantic(pt, tree)
+	fmt.Printf("%v\n", errors)
+	assert.Equal(t, 2, len(errors), "Expected one error.")
+}
+
+func TestCheckSemantic_unreachable_macrostates1(t *testing.T) {
+	program_string :=
+		"(ha,a,_,1,>)" +
+			"define macro m {" +
+			"(hs,a,_,1,>)" +
+			"(a,ha,_,1,>)" +
+			"(c,a,_,1,>)" + // c and hr are unreachable
+			"(c,hr,_,1,>)" +
+			"}" +
+			"(hs,a,_,1,>)" +
+			"(hr,a,_,1,>)"
+
+	_, tree := setupParser(program_string)
+	pt := antlr.ParseTreeWalkerDefault
+
+	errors := parser.CheckSemantic(pt, tree)
+	fmt.Printf("%v\n", errors)
+	assert.Equal(t, 2, len(errors), "Expected one error.")
+}
+
+func TestCheckSemantic_unreachable_macrostates2(t *testing.T) {
+	program_string :=
+		"(ha,a,_,1,>)" +
+			"define macro m {" +
+			"(hs,a,_,1,>)" +
+			"(a,ha,_,1,>)" +
+			"(c,a,_,1,>)" + // c is unreachable
+			"(c,hr,_,1,>)" +
+			"(a,hr,_,1,>)" + // but hr is not since a can reach it, and a is reachable
+			"}" +
+			"(hs,a,_,1,>)" +
+			"(hr,a,_,1,>)"
+
+	_, tree := setupParser(program_string)
+	pt := antlr.ParseTreeWalkerDefault
+
+	errors := parser.CheckSemantic(pt, tree)
+	fmt.Printf("%v\n", errors)
+	assert.Equal(t, 1, len(errors), "Expected one error.")
+}
+
 func TestFindUnreachableNodes(t *testing.T) {
 	g := graph.New(graph.Directed)
 	nodes := make(map[string]graph.Node, 0)
@@ -145,4 +206,23 @@ func TestFindUnreachableNodes(t *testing.T) {
 
 	unreachables := parser.FindUnreachableNodes(*g, nodes)
 	assert.Len(t, unreachables, 2)
+}
+
+func TestBuildMainProgramGraph(t *testing.T) {
+	program_string := "" +
+		"(hs,a,_,1,>)" +
+		"define macro testMacro {" +
+		"}" +
+		"(b, 0)testMacro(c,a)" +
+		"(c, 0)testMacro(a,b)" +
+		"(a,b,_,0,>) " +
+		"(b,ha,_,1,_)" +
+		"(c,hr,_,1,_)"
+
+	_, tree := setupParser(program_string)
+	pt := antlr.ParseTreeWalkerDefault
+	var mainprogbuilder parser.MainProgramGraphBuilder
+	pt.Walk(&mainprogbuilder, tree)
+	assert.Len(t, mainprogbuilder.Nodes, 6)
+
 }
