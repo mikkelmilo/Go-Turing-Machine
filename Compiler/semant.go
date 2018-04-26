@@ -1,7 +1,8 @@
-package parser
+package Compiler
 
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/mikkelmilo/Go-Turing-Machine/Compiler/antlr-parser"
 	"github.com/twmb/algoimpl/go/graph"
 )
 
@@ -12,14 +13,13 @@ import (
  *    - all states must be reachable from hs (the same is true for Macros and their states)
  *    - Macros must also contain hs, ha, and hr states
  *    - Nice-to-have: warnings will be produced (if enabled) if there are unbreakable cycles, ie.
- *      Nice-to-have: cycles which have no sequence of transitions to either ha or hr
  */
 
-type SemanticChecker func(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError
+type SemanticChecker func(pt *antlr.ParseTreeWalker, tree parser.IStartContext) []TMLError
 
-func CheckSemantic(pt *antlr.ParseTreeWalker, tree IStartContext) []TMLError {
+func CheckSemantic(pt *antlr.ParseTreeWalker, tree TMLParseTree) []TMLError {
 
-	// first walk the concrete syntax tree and report any parser errors found
+	// first walk the concrete syntax tree and report any basic semantic errors such as missing start/accept/reject states
 	var walker semantTreeListener
 	pt.Walk(&walker, tree)
 
@@ -105,7 +105,7 @@ func FindUnreachableNodes(g graph.Graph, nodes map[string]graph.Node) []graph.No
 }
 
 type semantTreeListener struct {
-	*BaseTMLListener
+	*parser.BaseTMLListener
 	errors             []TMLError
 	inMacro            bool
 	seenStartState     bool
@@ -116,7 +116,7 @@ type semantTreeListener struct {
 	rejectStateChanged bool
 }
 
-func (semant *semantTreeListener) EnterProgram(c *ProgramContext) {
+func (semant *semantTreeListener) EnterProgram(c *parser.ProgramContext) {
 	semant.errors = []TMLError{}
 	semant.inMacro = false
 	// predicates to determine if certain states have been seen so far in the current scope
@@ -128,7 +128,7 @@ func (semant *semantTreeListener) EnterProgram(c *ProgramContext) {
 	semant.rejectStateChanged = false
 }
 
-func (semant *semantTreeListener) EnterMacroDef(c *MacroDefContext) {
+func (semant *semantTreeListener) EnterMacroDef(c *parser.MacroDefContext) {
 	semant.seenRejectState = false
 	semant.seenAcceptState = false
 	semant.seenStartState = false
@@ -136,7 +136,7 @@ func (semant *semantTreeListener) EnterMacroDef(c *MacroDefContext) {
 
 }
 
-func (semant *semantTreeListener) EnterCommand(c *CommandContext) {
+func (semant *semantTreeListener) EnterCommand(c *parser.CommandContext) {
 	check_command := func(state_name string, state_type string) {
 		switch state_name {
 		case "hs":
@@ -175,7 +175,7 @@ func (semant *semantTreeListener) EnterCommand(c *CommandContext) {
 	check_command(c.GetNewState().GetText(), "newstate")
 }
 
-func (semant *semantTreeListener) ExitProgram(c *ProgramContext) {
+func (semant *semantTreeListener) ExitProgram(c *parser.ProgramContext) {
 	// check if the main TM contained a start, accept, and reject state. If not, report an error for each missing state.
 	if !semant.seenStartState {
 		semant.AppendErrorMsg("Missing start state", c.GetStart())
@@ -188,9 +188,9 @@ func (semant *semantTreeListener) ExitProgram(c *ProgramContext) {
 	}
 }
 
-func (semant *semantTreeListener) ExitMacroDef(c *MacroDefContext) {
+func (semant *semantTreeListener) ExitMacroDef(c *parser.MacroDefContext) {
 	semant.inMacro = false
-	macroName := c.GetToken(TMLParserID, 0).GetText()
+	macroName := c.GetToken(parser.TMLParserID, 0).GetText()
 	// check if macro contained a start, accept, and reject state. If not, report an error for each missing state.
 	if !semant.seenStartState {
 		semant.AppendErrorMsg("Missing start state in macro: "+macroName, c.GetStart())

@@ -1,4 +1,4 @@
-// Generated from TM-Language/TML.g4 by ANTLR 4.7.
+// Generated from Compiler/antlr-parser//TML.g4 by ANTLR 4.7.
 
 package parser // TML
 

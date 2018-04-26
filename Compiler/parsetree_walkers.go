@@ -1,4 +1,4 @@
-package parser
+package Compiler
 
 /*
 	This file contains specific parse-tree walkers. (all implementing the TMLListener interface)
@@ -8,13 +8,14 @@ package parser
 
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/mikkelmilo/Go-Turing-Machine/Compiler/antlr-parser"
 	"github.com/twmb/algoimpl/go/graph"
 	"strconv"
 	"strings"
 )
 
 type TMLTreePrinterListener struct {
-	*BaseTMLListener
+	*parser.BaseTMLListener
 	nesting_lvl int
 	errors      []antlr.ErrorNode
 }
@@ -27,77 +28,53 @@ func nestingLvlString(lvl int) string {
 	return str
 }
 
-func (t *TMLTreePrinterListener) EnterProgram(c *ProgramContext) {
+func (t *TMLTreePrinterListener) EnterProgram(c *parser.ProgramContext) {
 	t.nesting_lvl = 0
 	println("Program:")
 	t.nesting_lvl++
 }
 
-func (t *TMLTreePrinterListener) EnterMacroApp(c *MacroAppContext) {
-	name := c.GetToken(TMLLexerID, 0).GetText()
+func (t *TMLTreePrinterListener) EnterMacroApp(c *parser.MacroAppContext) {
+	name := c.GetToken(parser.TMLLexerID, 0).GetText()
 	print(nestingLvlString(t.nesting_lvl) + "Macro Application: " + name + "(")
 }
 
-func (t *TMLTreePrinterListener) EnterMacroDef(c *MacroDefContext) {
+func (t *TMLTreePrinterListener) EnterMacroDef(c *parser.MacroDefContext) {
 	println(nestingLvlString(t.nesting_lvl) + "Macro Definition: " +
-		c.GetToken(TMLLexerID, 0).GetText())
+		c.GetToken(parser.TMLLexerID, 0).GetText())
 	t.nesting_lvl++
 }
 
-func (t *TMLTreePrinterListener) EnterCommand(c *CommandContext) {
+func (t *TMLTreePrinterListener) EnterCommand(c *parser.CommandContext) {
 	print(nestingLvlString(t.nesting_lvl) + "Command: (")
 }
 
-func (t *TMLTreePrinterListener) EnterStateLabel(c *StateLabelContext) {
+func (t *TMLTreePrinterListener) EnterStateLabel(c *parser.StateLabelContext) {
 	print(c.GetText() + " ")
 }
 
-func (t *TMLTreePrinterListener) EnterTapeSymbol(c *TapeSymbolContext) {
+func (t *TMLTreePrinterListener) EnterTapeSymbol(c *parser.TapeSymbolContext) {
 	print(c.GetText() + " ")
 }
 
-func (t *TMLTreePrinterListener) EnterDirection(c *DirectionContext) {
+func (t *TMLTreePrinterListener) EnterDirection(c *parser.DirectionContext) {
 	print(c.GetText() + " ")
 }
 
-func (t *TMLTreePrinterListener) ExitProgram(c *ProgramContext) {
+func (t *TMLTreePrinterListener) ExitProgram(c *parser.ProgramContext) {
 	t.nesting_lvl--
 }
 
-func (t *TMLTreePrinterListener) ExitMacroApp(c *MacroAppContext) {
+func (t *TMLTreePrinterListener) ExitMacroApp(c *parser.MacroAppContext) {
 	println(")")
 }
 
-func (t *TMLTreePrinterListener) ExitMacroDef(c *MacroDefContext) {
+func (t *TMLTreePrinterListener) ExitMacroDef(c *parser.MacroDefContext) {
 	t.nesting_lvl--
 }
 
-func (t *TMLTreePrinterListener) ExitCommand(c *CommandContext) {
+func (t *TMLTreePrinterListener) ExitCommand(c *parser.CommandContext) {
 	println(")")
-}
-
-type TMLerrorListener struct {
-	Errors []TMLError
-}
-
-func (el *TMLerrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{},
-	line, column int, msg string, e antlr.RecognitionException) {
-	el.Errors = append(el.Errors, TMLError{line: line, column: column, msg: msg})
-}
-
-// we assert this never happens because this is inherently a property of the grammar, not the specific instance.
-func (el *TMLerrorListener) ReportAmbiguity(recognizer antlr.Parser, dfa *antlr.DFA, startIndex, stopIndex int, exact bool, ambigAlts *antlr.BitSet, configs antlr.ATNConfigSet) {
-	panic("implement me")
-}
-
-// we assert this never happens because this is inherently a property of the grammar, not the specific instance.
-func (el *TMLerrorListener) ReportAttemptingFullContext(recognizer antlr.Parser, dfa *antlr.DFA, startIndex, stopIndex int, conflictingAlts *antlr.BitSet, configs antlr.ATNConfigSet) {
-	panic("implement me")
-}
-
-// we assert this never happens because this is inherently a property of the grammar, not the specific instance.
-func (el *TMLerrorListener) ReportContextSensitivity(recognizer antlr.Parser, dfa *antlr.DFA, startIndex, stopIndex, prediction int, configs antlr.ATNConfigSet) {
-	panic("implement me")
 }
 
 type Command struct {
@@ -110,22 +87,22 @@ type Command struct {
 
 // A TML Tree listener which constructs a sequential program from a given TML Tree by unfolding all macro definitions
 type TMLMacroUnfolder struct {
-	*BaseTMLListener
+	*parser.BaseTMLListener
 	Program      []Command
 	Macros       map[string][]Command //maps from the macro name to its list of tuples
 	currentMacro string
 	uniqueNr     int
 }
 
-func (t *TMLMacroUnfolder) EnterProgram(c *ProgramContext) {
+func (t *TMLMacroUnfolder) EnterProgram(c *parser.ProgramContext) {
 	t.Program = make([]Command, 0)
 	t.Macros = make(map[string][]Command)
 	t.currentMacro = ""
 	t.uniqueNr = 0
 }
 
-func (t *TMLMacroUnfolder) EnterMacroApp(c *MacroAppContext) {
-	macroName := c.GetToken(TMLLexerID, 0).GetText()
+func (t *TMLMacroUnfolder) EnterMacroApp(c *parser.MacroAppContext) {
+	macroName := c.GetToken(parser.TMLLexerID, 0).GetText()
 	text := c.GetText()[1 : len(c.GetText())-1] //get text and remove surrounding ( and )
 	text = strings.Replace(text, ")", ",", -1)
 	text = strings.Replace(text, "(", ",", -1)
@@ -170,11 +147,11 @@ func (t *TMLMacroUnfolder) EnterMacroApp(c *MacroAppContext) {
 	t.Program = append(t.Program, macroCommands...)
 }
 
-func (t *TMLMacroUnfolder) EnterMacroDef(c *MacroDefContext) {
-	t.currentMacro = c.GetToken(TMLLexerID, 0).GetText()
+func (t *TMLMacroUnfolder) EnterMacroDef(c *parser.MacroDefContext) {
+	t.currentMacro = c.GetToken(parser.TMLLexerID, 0).GetText()
 }
 
-func (t *TMLMacroUnfolder) EnterCommand(c *CommandContext) {
+func (t *TMLMacroUnfolder) EnterCommand(c *parser.CommandContext) {
 	//therefore elems[0] will contain the current state string, elems[1] the new state string, elems[2] the current symbol, etc.
 	//since we have already syntax checked the program, we can assume that this command is syntactically correct
 	command := c.GetText()[1 : len(c.GetText())-1]
@@ -194,11 +171,11 @@ func (t *TMLMacroUnfolder) EnterCommand(c *CommandContext) {
 	}
 }
 
-func (t *TMLMacroUnfolder) EnterDirection(c *DirectionContext) {
+func (t *TMLMacroUnfolder) EnterDirection(c *parser.DirectionContext) {
 	t.Program[len(t.Program)-1].Direction = c.GetText()
 }
 
-func (t *TMLMacroUnfolder) ExitMacroDef(c *MacroDefContext) {
+func (t *TMLMacroUnfolder) ExitMacroDef(c *parser.MacroDefContext) {
 	t.currentMacro = ""
 }
 
@@ -216,20 +193,20 @@ func (t *TMLMacroUnfolder) GenerateUniqueStates(c []Command, macroName string, s
 // this struct builds a graph of the main program, but ignores the content of the macros
 // and instead just assumes all macros internally satisfy the reachability requirements of states
 type MainProgramGraphBuilder struct {
-	*BaseTMLListener
+	*parser.BaseTMLListener
 	Graph   *graph.Graph
 	Nodes   map[string]graph.Node
 	inMacro bool
 }
 
-func (m *MainProgramGraphBuilder) EnterStart(c *StartContext) {
+func (m *MainProgramGraphBuilder) EnterStart(c *parser.StartContext) {
 	m.inMacro = false
 	m.Graph = graph.New(graph.Directed)
 	m.Nodes = make(map[string]graph.Node, 0)
 
 }
 
-func (m *MainProgramGraphBuilder) EnterMacroApp(c *MacroAppContext) {
+func (m *MainProgramGraphBuilder) EnterMacroApp(c *parser.MacroAppContext) {
 	// make transitions from entering state to accepting and rejecting state of macro
 
 	// only add commands that are not inside macros
@@ -264,11 +241,11 @@ func (m *MainProgramGraphBuilder) EnterMacroApp(c *MacroAppContext) {
 	}
 }
 
-func (m *MainProgramGraphBuilder) EnterMacroDef(c *MacroDefContext) {
+func (m *MainProgramGraphBuilder) EnterMacroDef(c *parser.MacroDefContext) {
 	m.inMacro = true
 }
 
-func (m *MainProgramGraphBuilder) EnterCommand(c *CommandContext) {
+func (m *MainProgramGraphBuilder) EnterCommand(c *parser.CommandContext) {
 	// only add commands that are not inside macros
 	if !m.inMacro {
 		// add new nodes for current and new state, and make an edge between them.
@@ -293,6 +270,6 @@ func (m *MainProgramGraphBuilder) EnterCommand(c *CommandContext) {
 	}
 }
 
-func (m *MainProgramGraphBuilder) ExitMacroDef(c *MacroDefContext) {
+func (m *MainProgramGraphBuilder) ExitMacroDef(c *parser.MacroDefContext) {
 	m.inMacro = false
 }
