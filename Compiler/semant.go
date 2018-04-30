@@ -152,10 +152,6 @@ func (semant *semantTreeListener) EnterCommand(c *parser.CommandContext) {
 				if !semant.inMacro {
 					semant.startStateChanged = true
 				}
-			} else if state_type == "currentstate" {
-				// else if the current state symbol is the start state, but not the first one
-				// seen in this scope, add an error.
-				semant.AppendErrorMsg("Multiple start states defined", c.GetStart())
 			}
 		case "ha":
 			if !semant.seenAcceptState {

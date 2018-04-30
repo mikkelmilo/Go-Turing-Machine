@@ -48,10 +48,10 @@ func (t Transition) asString(alphabetMap map[string]uint8) string {
 }
 
 type TMListener interface {
-	step(*TM)
-	haltedWithAccept(*TM)
-	haltedWithReject(*TM)
-	haltedWithError(*TM, error)
+	step(tm *TM)
+	haltedWithAccept(tm *TM)
+	haltedWithReject(tm *TM)
+	haltedWithError(tm *TM, err error)
 }
 
 // State struct for representing a state in the TM
@@ -74,7 +74,7 @@ type TM struct {
 	Head         int
 	Alphabet     []string
 	AlphabetMap  map[string]uint8
-	listeners    []*TMListener
+	listeners    []TMListener
 }
 
 /*
@@ -135,18 +135,18 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 
 	}
 	//finally, initialize the list of listeners to be empty
-	tm.listeners = make([]*TMListener, 0)
+	tm.listeners = make([]TMListener, 0)
 	return nil, tm
 }
 
-func (tm *TM) AddListener(l *TMListener) {
+func (tm *TM) AddListener(l TMListener) {
 	tm.listeners = append(tm.listeners, l)
 }
 
 /*
 	Removes all instances of a listener from the TM. Reports an error if listener is not found.
 */
-func (tm *TM) RemoveListener(l *TMListener) error {
+func (tm *TM) RemoveListener(l TMListener) error {
 	found := false
 	// remove all instances of this listener from the TM
 	for i, e := range tm.listeners {
@@ -166,7 +166,7 @@ func (tm *TM) RemoveListener(l *TMListener) error {
 	Removes all listeners from the TM
 */
 func (tm *TM) RemoveListeners() {
-	tm.listeners = make([]*TMListener, 0)
+	tm.listeners = make([]TMListener, 0)
 }
 
 // TODO: this operation may be very expensive and possibly redundant as well
@@ -186,9 +186,9 @@ func (tm *TM) Run(state chan string, quit chan int) error {
 	var steps uint64
 	steps = 0
 	if tm.StartState == nil {
-		return nil
+		return errors.New("no start state defined")
 	}
-	for tm.CurrentState != tm.AcceptState {
+	for tm.CurrentState != tm.AcceptState && tm.CurrentState != tm.RejectState {
 		select {
 		case <-state:
 			state <- tm.String()
@@ -217,21 +217,20 @@ func (tm *TM) Step() error {
 	// first check if current state is nil; then set current state to the start state
 	// else check if current state is either accept or reject. If so, report an error.
 	if tm.CurrentState == nil {
-		tm.Head = 1
+		tm.Head = 0
 		tm.CurrentState = tm.StartState
 
 	} else if tm.CurrentState == tm.AcceptState {
 		err := errors.New("TM is already at the accept state and cannot make further transitions")
 		for _, l := range tm.listeners {
-			(*l).haltedWithAccept(tm)
+			l.haltedWithAccept(tm)
 		}
 		return err
 	} else if tm.CurrentState == tm.RejectState {
-		err := errors.New("TM is already at the reject state and cannot make further transitions")
 		for _, l := range tm.listeners {
-			(*l).haltedWithReject(tm)
+			l.haltedWithReject(tm)
 		}
-		return err
+		return nil
 	}
 
 	symbol := tm.Tape[tm.Head]
@@ -239,11 +238,11 @@ func (tm *TM) Step() error {
 	err := tm.makeTransition(tm.CurrentState, symbol)
 	if err != nil {
 		for _, l := range tm.listeners {
-			(*l).haltedWithError(tm, err)
+			l.haltedWithError(tm, err)
 		}
 	} else {
 		for _, l := range tm.listeners {
-			(*l).step(tm)
+			l.step(tm)
 		}
 	}
 	return err
@@ -271,7 +270,7 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 		}
 	}
 	if found == false && tm.CurrentState != tm.AcceptState {
-		return fmt.Errorf("no transitions found on state %s with symbol %v", s.Name, symbol)
+		return fmt.Errorf("no transitions found on state %s with symbol %c", s.Name, symbol)
 	}
 	return nil
 }
@@ -384,7 +383,7 @@ func Insert(slice []string, index int, value string) []string {
 }
 
 // removes an element from a list. Does not guarantee order.
-func remove(s []*TMListener, i int) []*TMListener {
+func remove(s []TMListener, i int) []TMListener {
 	s[len(s)-1], s[i] = s[i], s[len(s)-1]
 	return s[:len(s)-1]
 }
