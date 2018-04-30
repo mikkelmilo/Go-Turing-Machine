@@ -47,13 +47,6 @@ func (t Transition) asString(alphabetMap map[string]uint8) string {
 		"," + string(t.dir) + ")"
 }
 
-type TMListener interface {
-	step(tm *TM)
-	haltedWithAccept(tm *TM)
-	haltedWithReject(tm *TM)
-	haltedWithError(tm *TM, err error)
-}
-
 // State struct for representing a state in the TM
 type State struct {
 	Name string
@@ -242,7 +235,8 @@ func (tm *TM) Step() error {
 		}
 	} else {
 		for _, l := range tm.listeners {
-			l.step(tm)
+			inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
+			l.step(tm.CurrentState, inv_map[symbol], tm)
 		}
 	}
 	return err

@@ -1,11 +1,17 @@
 package TM
 
+type TMListener interface {
+	step(fromState *State, fromSymbol string, tm *TM)
+	haltedWithAccept(tm *TM)
+	haltedWithReject(tm *TM)
+	haltedWithError(tm *TM, err error)
+}
+
 type TMPrintListener struct {
 }
 
-func (TMPrintListener) step(tm *TM) {
-	println("transitioned to state " + tm.CurrentState.String())
-	println(tm.String())
+func (TMPrintListener) step(fromState *State, fromSymbol string, tm *TM) {
+	println("transitioned from state " + fromState.String() + " with symbol " + fromSymbol + " to state " + tm.CurrentState.String())
 }
 
 func (TMPrintListener) haltedWithAccept(tm *TM) {
