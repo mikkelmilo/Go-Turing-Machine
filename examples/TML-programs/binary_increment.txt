@@ -1,0 +1,53 @@
+
+// this macro starts at a blank ("_") place on the tape, and writes 101 on the next three
+// (also assumed empty) entries, and then moves back to the beginning
+define macro insert101 {
+	(hs,s0,_,_,>)
+	(hs,hr,1,1,>)
+	(hs,hr,0,0,>)
+
+	(s0,s1,_,1,>)
+	(s1,s2,_,0,>)
+	(s2,s3,_,1,<)
+	(s3,s3,1,1,<)
+	(s3,s3,0,0,<)
+	(s3,ha,_,_,_)
+
+}
+
+define macro increment {
+	(hs,s0,_,_,>)
+	(hs,hr,0,0,_)
+	(hs,hr,1,1,_)
+
+	(s0,s1,1,1,>)
+	(s0,s1,0,0,>)
+	(s0,hr,_,_,<)
+
+
+	// keep going right until we hit a "_"
+	(s1,s1,1,1,>)
+	(s1,s1,0,0,>)
+	(s1,s2,_,_,<)
+
+
+	(s2,s2,1,0,<)
+	(s2,s3,_,_,>)
+	(s2,s5,0,1,<)
+	(s3,s4,0,1,>)
+	(s4,s4,0,0,>)
+	(s4,s4,1,1,>)
+	(s4,s4,0,0,>)
+	(s4,s4,_,0,<)
+
+	// move back to the start position - ie. all the way left
+	(s5,s5,1,1,<)
+	(s5,s5,0,0,<)
+	(s5,ha,_,_,_)
+}
+
+(hs,hs_tmp,_,_,_)
+(hs_tmp,_)insert101(s1,hr_tmp)
+(s1,_)increment(ha_tmp,hr_tmp)
+(hr_tmp,hr,_,_,_)
+(ha_tmp,ha,_,_,_)

@@ -158,14 +158,12 @@ func (t *TMLMacroUnfolder) EnterMacroDef(c *parser.MacroDefContext) {
 func (t *TMLMacroUnfolder) EnterCommand(c *parser.CommandContext) {
 	//therefore elems[0] will contain the current state string, elems[1] the new state string, elems[2] the current symbol, etc.
 	//since we have already syntax checked the program, we can assume that this command is syntactically correct
-	command := c.GetText()[1 : len(c.GetText())-1]
-	elems := strings.Split(command, ",")
 	cm := Command{
-		CurrentState:  elems[0],
-		NewState:      elems[1],
-		CurrentSymbol: elems[2],
-		NewSymbol:     elems[3],
-		Direction:     elems[4],
+		CurrentState:  c.GetCurrentState().GetText(),
+		NewState:      c.GetNewState().GetText(),
+		CurrentSymbol: c.GetCurrentSymbol().GetText(),
+		NewSymbol:     c.GetNewSymbol().GetText(),
+		Direction:     c.GetDir().GetText(),
 	}
 	// if we are not in a macro definition, add to t.Program list, else add to t.Macros[t.currentMacro]
 	if t.currentMacro == "" {
@@ -176,7 +174,6 @@ func (t *TMLMacroUnfolder) EnterCommand(c *parser.CommandContext) {
 }
 
 func (t *TMLMacroUnfolder) EnterDirection(c *parser.DirectionContext) {
-	t.Program[len(t.Program)-1].Direction = c.GetText()
 }
 
 func (t *TMLMacroUnfolder) ExitMacroDef(c *parser.MacroDefContext) {

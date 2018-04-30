@@ -58,3 +58,7 @@ the TM is in state p_1 and sees symbol σ.
 The last two transition rules make the transitions from the macro's accept state to p_1,
 and from the macros reject state to p_2. Both of these transitions are unconditional, so we don't care about what the tape
 head contains, and we don't move the tape head either.
+
+## TML quirks
+start, accept, and reject states cannot *only* exist in macro application commands. They must also exist in "normal" commands.
+Otherwise the compiler will (albeit somewhat errornously) report an error that this state is missing.
