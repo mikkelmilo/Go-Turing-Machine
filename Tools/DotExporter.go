@@ -13,64 +13,73 @@ import (
  This way, we can use external tools, such as graphviz, to visualize Turing Machines.
 */
 
-func TMToDotFile(tm TM.TM) error {
+func TMToDotFile(tm TM.TM, fileName string) error {
 	transitions := tm.Transitions
 	var graphBuf bytes.Buffer
 	transitions_string := make([]string, 0)
 	hasSelfLoop := make(map[string]bool) // maps a state name to true if it has a self loop in the TM
+
 	graphBuf.WriteString("digraph TM {\n")
 	graphBuf.WriteString("node [nodesep=2.0, fontsize=11];\n")
 	graphBuf.WriteString("graph [overlap = false];\n")
+
+	transitions_string = makeTransitions(transitions, hasSelfLoop, tm, transitions_string)
+
+	for _, tr := range transitions_string {
+		graphBuf.WriteString(tr)
+	}
+
+	graphBuf.WriteString("}")
+	graph, err := gographviz.Parse(graphBuf.Bytes())
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(fileName)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+	if _, err := f.WriteString(graph.String()); err != nil {
+		return err
+	}
+	f.Sync()
+	return nil
+}
+
+func makeTransitions(transitions []TM.Transition, hasSelfLoop map[string]bool, tm TM.TM, transitions_string []string) []string {
 	for _, t := range transitions {
 		// if this transition is a self loop, and it is the first self loop seen for this state
 		// then draw a new transition. Otherwise just add text to the label.
 		ok, val := hasSelfLoop[t.CurState.String()]
 		if t.CurState.String() == t.NewState.String() && (!ok || !val) {
 			hasSelfLoop[t.CurState.String()] = true
-
-			label := "label=\"" + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\""
-			minlength := "minlength=2"
-			options := " [" + label + " " + minlength + " ]"
-			transitions_string = append(transitions_string, t.CurState.String()+" -> "+t.NewState.String()+options+";\n")
+			transitions_string = addNewTransitionString(t, tm, transitions_string)
 		} else if t.CurState.String() == t.NewState.String() && hasSelfLoop[t.CurState.String()] == true {
 			// else find the graphviz transition and modify it
 			str := t.CurState.String() + " -> " + t.NewState.String()
-			for j, tr := range transitions_string {
-				if strings.HasPrefix(tr, str) {
-					//print("replaced ", tr, " with ")
-					new_str := "label=\"" + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\\n"
-					transitions_string[j] = strings.Replace(tr, "label=\"", new_str, 1)
-					//println(transitions_string[j])
-					break
-				}
-			}
+			findAndModifyTransition(transitions_string, str, t, tm)
 		} else {
-			label := "label=\"" + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\""
-			minlength := "minlength=2"
-			options := " [" + label + " " + minlength + " ]"
-			transitions_string = append(transitions_string, t.CurState.String()+" -> "+t.NewState.String()+options+";\n")
+			transitions_string = addNewTransitionString(t, tm, transitions_string)
 		}
 	}
-	for _, tr := range transitions_string {
-		graphBuf.WriteString(tr)
-	}
-	graphBuf.WriteString("}")
-	println(graphBuf.String())
-	graph, err := gographviz.Parse(graphBuf.Bytes())
-	if err != nil {
-		return err
-	}
+	return transitions_string
+}
 
-	f, err := os.Create("tm.dot")
-	defer f.Close()
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(graph.String())
-	if err != nil {
-		return err
-	}
-	f.Sync()
+func addNewTransitionString(t TM.Transition, tm TM.TM, transitions_string []string) []string {
+	label := "label=\" " + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\""
+	minlength := "minlength=2"
+	options := " [" + label + " " + minlength + " ]"
+	transitions_string = append(transitions_string, t.CurState.String()+" -> "+t.NewState.String()+options+";\n")
+	return transitions_string
+}
 
-	return nil
+func findAndModifyTransition(transitions_string []string, str string, t TM.Transition, tm TM.TM) {
+	for j, tr := range transitions_string {
+		if strings.HasPrefix(tr, str) {
+			new_str := "label=\" " + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\\n"
+			transitions_string[j] = strings.Replace(tr, "label=\" ", new_str, 1)
+			break
+		}
+	}
 }
