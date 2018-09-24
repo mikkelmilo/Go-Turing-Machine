@@ -59,6 +59,18 @@ func (t Transition) asString(alphabetMap map[string]uint8) string {
 		"," + string(t.dir) + ")"
 }
 
+func (t Transition) GetCurSymbol(tm TM) string {
+	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
+	return inv_map[t.curSymbol]
+}
+func (t Transition) GetNewSymbol(tm TM) string {
+	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
+	return inv_map[t.newSymbol]
+}
+func (t Transition) GetDir() string {
+	return string(t.dir)
+}
+
 func (tm *TM) String() string {
 	// convert tape into an array of characters from the alphabet
 	tape_formatted := make([]string, len(tm.Tape))

@@ -37,18 +37,6 @@ type Transition struct {
 	dir       uint8
 }
 
-func (t Transition) GetCurSymbol(tm TM) string {
-	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
-	return inv_map[t.curSymbol]
-}
-func (t Transition) GetNewSymbol(tm TM) string {
-	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
-	return inv_map[t.newSymbol]
-}
-func (t Transition) GetDir() string {
-	return string(t.dir)
-}
-
 // State struct for representing a state in the TM
 type State struct {
 	Name string
