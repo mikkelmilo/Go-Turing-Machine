@@ -15,7 +15,7 @@ import (
  *    - Nice-to-have: warnings will be produced (if enabled) if there are unbreakable cycles, ie.
  */
 
-type SemanticChecker func(pt *antlr.ParseTreeWalker, tree parser.IStartContext) []TMLError
+type TMLSemanticChecker func(*antlr.ParseTreeWalker, TMLParseTree) []TMLError
 
 func CheckSemantic(pt *antlr.ParseTreeWalker, tree TMLParseTree) []TMLError {
 
@@ -104,6 +104,13 @@ func FindUnreachableNodes(g graph.Graph, nodes map[string]graph.Node) []graph.No
 	return unvisited
 }
 
+// -------------------------------------------------------------------------
+
+/*
+	semantTreeListener is a TMLTreListener that does basic semantic checking on a given TML concrete syntax tree.
+	It checks that the program contains exactly one instance the necessary states:
+	start, accept, and reject states (and does the same for all macro definitions).
+*/
 type semantTreeListener struct {
 	*parser.BaseTMLListener
 	errors             []TMLError
@@ -145,10 +152,6 @@ func (semant *semantTreeListener) EnterCommand(c *parser.CommandContext) {
 				if !semant.inMacro {
 					semant.startStateChanged = true
 				}
-			} else if state_type == "currentstate" {
-				// else if the current state symbol is the start state, but not the first one
-				// seen in this scope, add an error.
-				semant.AppendErrorMsg("Multiple start states defined", c.GetStart())
 			}
 		case "ha":
 			if !semant.seenAcceptState {
@@ -213,4 +216,90 @@ func (semant *semantTreeListener) AppendErrorMsg(msg string, c antlr.Token) {
 			line:   c.GetLine(),
 			msg:    msg,
 		})
+}
+
+// -------------------------------------------------------------------------------------
+
+// this struct builds a graph of the main program, but ignores the content of the macros
+// and instead just assumes all macros internally satisfy the reachability requirements of states
+type MainProgramGraphBuilder struct {
+	*parser.BaseTMLListener
+	Graph   *graph.Graph
+	Nodes   map[string]graph.Node
+	inMacro bool
+}
+
+func (m *MainProgramGraphBuilder) EnterStart(c *parser.StartContext) {
+	m.inMacro = false
+	m.Graph = graph.New(graph.Directed)
+	m.Nodes = make(map[string]graph.Node, 0)
+
+}
+
+func (m *MainProgramGraphBuilder) EnterMacroApp(c *parser.MacroAppContext) {
+	// make transitions from entering state to accepting and rejecting state of macro
+
+	// only add commands that are not inside macros
+	if !m.inMacro {
+		// add new nodes for current and new state, and make an edge between them.
+		enteringstate_name := c.GetEnteringState().GetText()
+		// if entering state doesn't exist as a node in the graph, add it
+		if _, ok := m.Nodes[enteringstate_name]; !ok {
+			n1 := m.Graph.MakeNode()
+			*n1.Value = enteringstate_name
+			m.Nodes[enteringstate_name] = n1
+
+		}
+		macroaccept_name := c.GetAcceptState().GetText()
+		// if macro accept state doesn't exist as a node in the graph, add it
+		if _, ok := m.Nodes[macroaccept_name]; !ok {
+			n2 := m.Graph.MakeNode()
+			*n2.Value = macroaccept_name
+			m.Nodes[macroaccept_name] = n2
+		}
+
+		macroreject_name := c.GetRejectState().GetText()
+		// if macro accept state doesn't exist as a node in the graph, add it
+		if _, ok := m.Nodes[macroreject_name]; !ok {
+			n2 := m.Graph.MakeNode()
+			*n2.Value = macroreject_name
+			m.Nodes[macroreject_name] = n2
+		}
+
+		m.Graph.MakeEdge(m.Nodes[enteringstate_name], m.Nodes[macroaccept_name])
+		m.Graph.MakeEdge(m.Nodes[enteringstate_name], m.Nodes[macroreject_name])
+	}
+}
+
+func (m *MainProgramGraphBuilder) EnterMacroDef(c *parser.MacroDefContext) {
+	m.inMacro = true
+}
+
+func (m *MainProgramGraphBuilder) EnterCommand(c *parser.CommandContext) {
+	// only add commands that are not inside macros
+	if !m.inMacro {
+		// add new nodes for current and new state, and make an edge between them.
+		curstate_name := c.GetCurrentState().GetText()
+		// if currentstate doesn't exist as a node in the graph, add it
+		if _, ok := m.Nodes[curstate_name]; !ok {
+			n1 := m.Graph.MakeNode()
+			*n1.Value = curstate_name
+			m.Nodes[curstate_name] = n1
+
+		}
+		newstate_name := c.GetNewState().GetText()
+		// if newstate doesn't exist as a node in the graph, add it
+		if _, ok := m.Nodes[newstate_name]; !ok {
+			n2 := m.Graph.MakeNode()
+			*n2.Value = newstate_name
+			m.Nodes[newstate_name] = n2
+		}
+
+		// finally add a transition between them
+		m.Graph.MakeEdge(m.Nodes[curstate_name], m.Nodes[newstate_name])
+	}
+}
+
+func (m *MainProgramGraphBuilder) ExitMacroDef(c *parser.MacroDefContext) {
+	m.inMacro = false
 }

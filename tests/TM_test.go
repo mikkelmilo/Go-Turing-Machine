@@ -2,7 +2,6 @@ package testing
 
 import (
 	"github.com/mikkelmilo/Go-Turing-Machine/TM"
-	"github.com/mikkelmilo/Go-Turing-Machine/TM-Language"
 	"github.com/mikkelmilo/Go-Turing-Machine/examples"
 	"github.com/stretchr/testify/assert"
 	"testing"

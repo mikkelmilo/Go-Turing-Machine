@@ -24,29 +24,62 @@ func IncBinaryTM(s []string) (error, *TM.TM) {
 		return err, nil
 	}
 	start_state := TM.State{Name: "r"}
+	s0 := TM.State{Name: "x"}
+	s1 := TM.State{Name: "a"}
 	s2 := TM.State{Name: "b"}
 	s3 := TM.State{Name: "c"}
 	s4 := TM.State{Name: "d"}
 	s5 := TM.State{Name: "e"}
 	ha := TM.State{Name: "ha"}
+	hr := TM.State{Name: "hr"}
 	tm.AcceptState = &ha
 	tm.StartState = &start_state
-
+	tm.RejectState = &hr
 	//first go to the end of the binary number.
 
-	err1 := tm.AddTransition(&start_state, &start_state, "0", "0", ">")
-	if err1 != nil {
-		return err1, nil
-	}
-	err1 = tm.AddTransition(&start_state, &start_state, "1", "1", ">")
-	if err1 != nil {
-		return err1, nil
-	}
-	err1 = tm.AddTransition(&start_state, &s2, "_", "_", "<")
+	err1 := tm.AddTransition(&start_state, &s0, "_", "_", ">")
 	if err1 != nil {
 		return err1, nil
 	}
 
+	// go to reject state if the first symbol is not "_"
+	err1 = tm.AddTransition(&start_state, &hr, "1", "1", "_")
+	if err1 != nil {
+		return err1, nil
+	}
+	err1 = tm.AddTransition(&start_state, &hr, "0", "0", "_")
+	if err1 != nil {
+		return err1, nil
+	}
+
+	err1 = tm.AddTransition(&s0, &s1, "1", "1", ">")
+	if err1 != nil {
+		return err1, nil
+	}
+	err1 = tm.AddTransition(&s0, &s1, "0", "0", ">")
+	if err1 != nil {
+		return err1, nil
+	}
+	// if the first bit in the number is "_", then go to reject state since this is an error.
+	err1 = tm.AddTransition(&s0, &hr, "_", "_", "<")
+	if err1 != nil {
+		return err1, nil
+	}
+	// keep going right
+	err1 = tm.AddTransition(&s1, &s1, "1", "1", ">")
+	if err1 != nil {
+		return err1, nil
+	}
+	// keep going right
+	err1 = tm.AddTransition(&s1, &s1, "0", "0", ">")
+	if err1 != nil {
+		return err1, nil
+	}
+	// here we arrive at the right-end of the number.
+	err1 = tm.AddTransition(&s1, &s2, "_", "_", "<")
+	if err1 != nil {
+		return err1, nil
+	}
 	// on our way left-wards, replace occurrences of 1 with 0
 	err1 = tm.AddTransition(&s2, &s2, "1", "0", "<")
 	if err1 != nil {
