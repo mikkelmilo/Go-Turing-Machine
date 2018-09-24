@@ -38,7 +38,8 @@ define macro increment {
 	(s4,s4,0,0,>)
 	(s4,s4,1,1,>)
 	(s4,s4,0,0,>)
-	(s4,s4,_,0,<)
+	// add a new 0 at the end
+	(s4,s5,_,0,<)
 
 	// move back to the start position - ie. all the way left
 	(s5,s5,1,1,<)
