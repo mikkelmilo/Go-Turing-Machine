@@ -37,16 +37,6 @@ type Transition struct {
 	dir       uint8
 }
 
-func (t Transition) asString(alphabetMap map[string]uint8) string {
-	inv_map := getInverseAlphabetMapping(alphabetMap)
-	return "(" +
-		t.CurState.String() +
-		"," + t.NewState.String() +
-		"," + inv_map[t.curSymbol] +
-		"," + inv_map[t.newSymbol] +
-		"," + string(t.dir) + ")"
-}
-
 // State struct for representing a state in the TM
 type State struct {
 	Name string
@@ -87,24 +77,7 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 	// build alphabet map to uint8 on which the TM will operate
 	// uint8 values 95, 60, 62, 123, and 125 are reserved.
 	tm.Alphabet = alphabet
-	alphabetMap := make(map[string]uint8)
-	alphabetMap["_"] = Empty
-	alphabetMap["<"] = Left
-	alphabetMap[">"] = Right
-	alphabetMap["{"] = LeftBracket
-	alphabetMap["}"] = RightBracket
-
-	var cur_uint uint8 = 0
-	for _, char := range alphabet {
-		// note: this suffices since we know neither of the contants follow each other in value.
-		if cur_uint == Empty || cur_uint == Left || cur_uint == Right ||
-			cur_uint == LeftBracket || cur_uint == RightBracket {
-			cur_uint++
-		}
-		alphabetMap[char] = cur_uint
-		cur_uint++
-	}
-	tm.AlphabetMap = alphabetMap
+	tm.AlphabetMap = buildAlphabetMap(alphabet)
 
 	tm.Head = 0
 	// initially, set tape to an array of either two 'Empty' elements,
@@ -130,6 +103,27 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 	//finally, initialize the list of listeners to be empty
 	tm.listeners = make([]TMListener, 0)
 	return nil, tm
+}
+
+func buildAlphabetMap(alphabet []string) map[string]uint8{
+	alphabetMap := make(map[string]uint8)
+	alphabetMap["_"] = Empty
+	alphabetMap["<"] = Left
+	alphabetMap[">"] = Right
+	alphabetMap["{"] = LeftBracket
+	alphabetMap["}"] = RightBracket
+
+	var cur_uint uint8 = 0
+	for _, char := range alphabet {
+		// note: this suffices since we know neither of the contants follow each other in value.
+		if cur_uint == Empty || cur_uint == Left || cur_uint == Right ||
+			cur_uint == LeftBracket || cur_uint == RightBracket {
+			cur_uint++
+		}
+		alphabetMap[char] = cur_uint
+		cur_uint++
+	}
+	return alphabetMap
 }
 
 func (tm *TM) AddListener(l TMListener) {
@@ -315,42 +309,6 @@ func (tm *TM) SetRejctState(s *State) {
 	tm.RejectState = s
 }
 
-func (tm *TM) String() string {
-	// convert tape into an array of characters from the alphabet
-	tape_formatted := make([]string, len(tm.Tape))
-	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
-	for i, char := range tm.Tape {
-		tape_formatted[i] = inv_map[char]
-	}
-	//insert { } around the current position on the tape
-
-	t1 := Insert(tape_formatted, tm.Head, "{")
-	t2 := Insert(t1, tm.Head+2, "}")
-
-	transitions_string := func(t []Transition) string {
-		str := "["
-		for _, trans := range t {
-			str = str + trans.asString(tm.AlphabetMap) + ","
-		}
-		str = str[0 : len(str)-1] // trim last ','
-		str = str + "]"
-		return str
-	}
-
-	nil_string := func(s *State) string {
-		if s == nil {
-			return "None"
-		}
-		return s.String()
-	}
-	return "TM:\n" +
-		"Alphabet: " + fmt.Sprintf("%v \n", tm.Alphabet) +
-		"Reject state: " + nil_string(tm.RejectState) + "\n" +
-		"Current state: " + nil_string(tm.CurrentState) + "\n" +
-		"Transitions: " + transitions_string(tm.Transitions) + "\n" +
-		"Tape:\n" + fmt.Sprintf("%v \n", t2)
-}
-
 /*
  * Reverses the alphabet mapping. Assumes alphabetMap is reversible.
  */
@@ -360,24 +318,4 @@ func getInverseAlphabetMapping(alphabetMap map[string]uint8) map[uint8]string {
 		res[value] = key
 	}
 	return res
-}
-
-// Insert inserts the value into the slice at the specified index,
-// which must be in range.
-// The slice must have room for the new element.
-func Insert(slice []string, index int, value string) []string {
-	// Grow the slice by one element.
-	r := append(slice, "")
-	// Use copy to move the upper part of the slice out of the way and open a hole.
-	copy(r[index+1:], r[index:])
-	// Store the new value.
-	r[index] = value
-	// Return the result.
-	return r
-}
-
-// removes an element from a list. Does not guarantee order.
-func remove(s []TMListener, i int) []TMListener {
-	s[len(s)-1], s[i] = s[i], s[len(s)-1]
-	return s[:len(s)-1]
 }
