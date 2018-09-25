@@ -48,7 +48,7 @@ macroApp
 			enteringState=stateLabel COMMA
 			enteringSymbol=tapeSymbol
 		RPAREN
-		ID
+		macroName=ID
 		LPAREN
 			acceptState=stateLabel COMMA
 			rejectState=stateLabel
@@ -56,7 +56,7 @@ macroApp
 	;
 
 macroDef
-	:	DEFINE MACRO ID LBRACE statements=statement* RBRACE
+	:	DEFINE MACRO macroName=ID LBRACE statements=statement* RBRACE
 	;
 
 

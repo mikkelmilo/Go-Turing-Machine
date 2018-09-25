@@ -17,9 +17,7 @@ func TestCompileTMLProgram(t *testing.T) {
 	errs, tm := CompileTMLProgram(*buf, ParseTMLProgram, CheckSemantic)
 	assert.Nil(t, errs)
 	err = tm.Run(nil, nil)
-	if err != nil {
-		panic(err)
-	}
+	assert.Nil(t, err)
 	println("Result of compiling and running write_101.txt:")
 	println(tm.String())
 
@@ -37,9 +35,7 @@ func TestCompileTMLProgramOnBinary_increment(t *testing.T) {
 	var l TM.TMPrintListener
 	tm.AddListener(&l)
 	err = tm.Run(nil, nil)
-	if err != nil {
-		panic(err)
-	}
+	assert.Nil(t, err)
 	println("Result of compiling and running write_101.txt:")
 	println(tm.String())
 

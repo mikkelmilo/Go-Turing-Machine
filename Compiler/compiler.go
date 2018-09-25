@@ -6,7 +6,6 @@ import (
 	"github.com/mikkelmilo/Go-Turing-Machine/Compiler/antlr-parser"
 	"github.com/mikkelmilo/Go-Turing-Machine/TM"
 	"strconv"
-	"strings"
 )
 
 /*
@@ -18,12 +17,15 @@ import (
 type TMLCompiler func(bytes.Buffer, TMLParser, TMLSemanticChecker) ([]TMLError, TM.TM)
 
 const (
-	START_STATE_PREFIX = "hs_"
-	ACCEPT_STATE_PREFIX = "ha_"
-	REJECT_STATE_PREFIX = "hr_"
-
+	StartStatePrefix  = "hs_"
+	AcceptStatePrefix = "ha_"
+	RejectStatePrefix = "hr_"
 )
 
+/*
+	Compiles a TML program, given as a byte buffer, using a given TMLParser and TMLSemanticChecker.
+	Returns a list of errors and the generated TM, if no errors were found.
+*/
 func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TMLSemanticChecker) ([]TMLError, TM.TM) {
 	// parse the program, and report any errors.
 	errs, syntaxTree := parser(program)
@@ -39,6 +41,7 @@ func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TML
 	// assuming no other errors, construct the TM. First we need to unfold macro applications.
 	var macroUnfolder TMLMacroUnfolder
 	antlr.ParseTreeWalkerDefault.Walk(&macroUnfolder, syntaxTree)
+
 	// unfoldedProgram is a list of commands where all macro applications have been replaced by its macro definition.
 	// and everything has been neatly merged into a sequential program.
 	unfoldedProgram := macroUnfolder.Program
@@ -47,21 +50,21 @@ func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TML
 	states := make(map[string]*TM.State)
 
 	for _, command := range unfoldedProgram {
-		cursym := command.CurrentSymbol
-		newsym := command.NewSymbol
+		currentSymbol := command.CurrentSymbol
+		newSymbol := command.NewSymbol
 		// add symbols to alphabet if they don't already exist.
-		if _, exists := alphabet[cursym]; !exists && cursym != "_" {
-			alphabet[cursym] = true
+		if _, exists := alphabet[currentSymbol]; !exists && currentSymbol != "_" {
+			alphabet[currentSymbol] = true
 		}
-		if _, exists := alphabet[newsym]; !exists && newsym != "_" {
-			alphabet[newsym] = true
+		if _, exists := alphabet[newSymbol]; !exists && newSymbol != "_" {
+			alphabet[newSymbol] = true
 		}
 
 		// add states whenever we see new ones
-		curState := command.CurrentState
+		currentState := command.CurrentState
 		newState := command.NewState
-		if _, exists := states[curState]; !exists {
-			states[curState] = &TM.State{Name: curState}
+		if _, exists := states[currentState]; !exists {
+			states[currentState] = &TM.State{Name: currentState}
 		}
 		if _, exists := states[newState]; !exists {
 			states[newState] = &TM.State{Name: newState}
@@ -114,35 +117,29 @@ func (t *TMLMacroUnfolder) EnterProgram(c *parser.ProgramContext) {
 
 func (t *TMLMacroUnfolder) EnterMacroApp(c *parser.MacroAppContext) {
 	macroName := c.GetToken(parser.TMLLexerID, 0).GetText()
-	text := c.GetText()[1 : len(c.GetText())-1] //get text and remove surrounding ( and )
-	text = strings.Replace(text, ")", ",", -1)
-	text = strings.Replace(text, "(", ",", -1)
-	//elems is a list of the different "elements" of this macro application
-	elems := strings.Split(text, ",")
-
-	curStateName := elems[0]
-	curSymbol := elems[1]
-	acceptState := elems[3]
-	rejectState := elems[4]
+	curStateName := c.GetEnteringState().GetText()
+	curSymbol := c.GetEnteringSymbol().GetText()
+	acceptState := c.GetAcceptState().GetText()
+	rejectState := c.GetRejectState().GetText()
 
 	// make transition rules from curStatName to start starte of macro, and transitions when macro halts in accept or reject
 
 	macro_hs_trans := Command{
 		CurrentState:  curStateName,
-		NewState:      START_STATE_PREFIX + macroName + strconv.Itoa(t.uniqueNr),
+		NewState:      StartStatePrefix + macroName + strconv.Itoa(t.uniqueNr),
 		CurrentSymbol: curSymbol,
 		NewSymbol:     curSymbol,
 		Direction:     "_",
 	}
 	macro_ha_trans := Command{
-		CurrentState:  ACCEPT_STATE_PREFIX + macroName + strconv.Itoa(t.uniqueNr),
+		CurrentState:  AcceptStatePrefix + macroName + strconv.Itoa(t.uniqueNr),
 		NewState:      acceptState,
 		CurrentSymbol: "_",
 		NewSymbol:     "_",
 		Direction:     "_",
 	}
 	macro_hr_trans := Command{
-		CurrentState:  REJECT_STATE_PREFIX + macroName + strconv.Itoa(t.uniqueNr),
+		CurrentState:  RejectStatePrefix + macroName + strconv.Itoa(t.uniqueNr),
 		NewState:      rejectState,
 		CurrentSymbol: "_",
 		NewSymbol:     "_",
