@@ -17,6 +17,13 @@ import (
 
 type TMLCompiler func(bytes.Buffer, TMLParser, TMLSemanticChecker) ([]TMLError, TM.TM)
 
+const (
+	START_STATE_PREFIX = "hs_"
+	ACCEPT_STATE_PREFIX = "ha_"
+	REJECT_STATE_PREFIX = "hr_"
+
+)
+
 func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TMLSemanticChecker) ([]TMLError, TM.TM) {
 	// parse the program, and report any errors.
 	errs, syntaxTree := parser(program)
@@ -122,20 +129,20 @@ func (t *TMLMacroUnfolder) EnterMacroApp(c *parser.MacroAppContext) {
 
 	macro_hs_trans := Command{
 		CurrentState:  curStateName,
-		NewState:      "hs_" + macroName + strconv.Itoa(t.uniqueNr),
+		NewState:      START_STATE_PREFIX + macroName + strconv.Itoa(t.uniqueNr),
 		CurrentSymbol: curSymbol,
 		NewSymbol:     curSymbol,
 		Direction:     "_",
 	}
 	macro_ha_trans := Command{
-		CurrentState:  "ha_" + macroName + strconv.Itoa(t.uniqueNr),
+		CurrentState:  ACCEPT_STATE_PREFIX + macroName + strconv.Itoa(t.uniqueNr),
 		NewState:      acceptState,
 		CurrentSymbol: "_",
 		NewSymbol:     "_",
 		Direction:     "_",
 	}
 	macro_hr_trans := Command{
-		CurrentState:  "hr_" + macroName + strconv.Itoa(t.uniqueNr),
+		CurrentState:  REJECT_STATE_PREFIX + macroName + strconv.Itoa(t.uniqueNr),
 		NewState:      rejectState,
 		CurrentSymbol: "_",
 		NewSymbol:     "_",
