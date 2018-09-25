@@ -498,6 +498,9 @@ type IMacroAppContext interface {
 	// GetEnteringState returns the enteringState rule contexts.
 	GetEnteringState() IStateLabelContext
 
+	// GetEnteringSymbol returns the enteringSymbol rule contexts.
+	GetEnteringSymbol() ITapeSymbolContext
+
 	// GetAcceptState returns the acceptState rule contexts.
 	GetAcceptState() IStateLabelContext
 
@@ -506,6 +509,9 @@ type IMacroAppContext interface {
 
 	// SetEnteringState sets the enteringState rule contexts.
 	SetEnteringState(IStateLabelContext)
+
+	// SetEnteringSymbol sets the enteringSymbol rule contexts.
+	SetEnteringSymbol(ITapeSymbolContext)
 
 	// SetAcceptState sets the acceptState rule contexts.
 	SetAcceptState(IStateLabelContext)
@@ -519,10 +525,11 @@ type IMacroAppContext interface {
 
 type MacroAppContext struct {
 	*antlr.BaseParserRuleContext
-	parser        antlr.Parser
-	enteringState IStateLabelContext
-	acceptState   IStateLabelContext
-	rejectState   IStateLabelContext
+	parser         antlr.Parser
+	enteringState  IStateLabelContext
+	enteringSymbol ITapeSymbolContext
+	acceptState    IStateLabelContext
+	rejectState    IStateLabelContext
 }
 
 func NewEmptyMacroAppContext() *MacroAppContext {
@@ -549,11 +556,15 @@ func (s *MacroAppContext) GetParser() antlr.Parser { return s.parser }
 
 func (s *MacroAppContext) GetEnteringState() IStateLabelContext { return s.enteringState }
 
+func (s *MacroAppContext) GetEnteringSymbol() ITapeSymbolContext { return s.enteringSymbol }
+
 func (s *MacroAppContext) GetAcceptState() IStateLabelContext { return s.acceptState }
 
 func (s *MacroAppContext) GetRejectState() IStateLabelContext { return s.rejectState }
 
 func (s *MacroAppContext) SetEnteringState(v IStateLabelContext) { s.enteringState = v }
+
+func (s *MacroAppContext) SetEnteringSymbol(v ITapeSymbolContext) { s.enteringSymbol = v }
 
 func (s *MacroAppContext) SetAcceptState(v IStateLabelContext) { s.acceptState = v }
 
@@ -573,16 +584,6 @@ func (s *MacroAppContext) AllCOMMA() []antlr.TerminalNode {
 
 func (s *MacroAppContext) COMMA(i int) antlr.TerminalNode {
 	return s.GetToken(TMLParserCOMMA, i)
-}
-
-func (s *MacroAppContext) TapeSymbol() ITapeSymbolContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ITapeSymbolContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(ITapeSymbolContext)
 }
 
 func (s *MacroAppContext) AllRPAREN() []antlr.TerminalNode {
@@ -618,6 +619,16 @@ func (s *MacroAppContext) StateLabel(i int) IStateLabelContext {
 	}
 
 	return t.(IStateLabelContext)
+}
+
+func (s *MacroAppContext) TapeSymbol() ITapeSymbolContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ITapeSymbolContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(ITapeSymbolContext)
 }
 
 func (s *MacroAppContext) GetRuleContext() antlr.RuleContext {
@@ -678,7 +689,10 @@ func (p *TMLParser) MacroApp() (localctx IMacroAppContext) {
 	}
 	{
 		p.SetState(34)
-		p.TapeSymbol()
+
+		var _x = p.TapeSymbol()
+
+		localctx.(*MacroAppContext).enteringSymbol = _x
 	}
 	{
 		p.SetState(35)
@@ -725,13 +739,20 @@ type IMacroDefContext interface {
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
+	// GetStatements returns the statements rule contexts.
+	GetStatements() IStatementContext
+
+	// SetStatements sets the statements rule contexts.
+	SetStatements(IStatementContext)
+
 	// IsMacroDefContext differentiates from other interfaces.
 	IsMacroDefContext()
 }
 
 type MacroDefContext struct {
 	*antlr.BaseParserRuleContext
-	parser antlr.Parser
+	parser     antlr.Parser
+	statements IStatementContext
 }
 
 func NewEmptyMacroDefContext() *MacroDefContext {
@@ -755,6 +776,10 @@ func NewMacroDefContext(parser antlr.Parser, parent antlr.ParserRuleContext, inv
 }
 
 func (s *MacroDefContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *MacroDefContext) GetStatements() IStatementContext { return s.statements }
+
+func (s *MacroDefContext) SetStatements(v IStatementContext) { s.statements = v }
 
 func (s *MacroDefContext) DEFINE() antlr.TerminalNode {
 	return s.GetToken(TMLParserDEFINE, 0)
@@ -864,7 +889,10 @@ func (p *TMLParser) MacroDef() (localctx IMacroDefContext) {
 	for _la == TMLParserDEFINE || _la == TMLParserLPAREN {
 		{
 			p.SetState(47)
-			p.Statement()
+
+			var _x = p.Statement()
+
+			localctx.(*MacroDefContext).statements = _x
 		}
 
 		p.SetState(52)
