@@ -1,5 +1,7 @@
 package TM
 
+import "fmt"
+
 type TMListener interface {
 	step(fromState *State, fromSymbol string, tm *TM)
 	haltedWithAccept(tm *TM)
@@ -46,26 +48,25 @@ func remove(s []TMListener, i int) []TMListener {
 	return s[:len(s)-1]
 }
 
-
 // ### Printing-related functions ####
 
 func (t Transition) asString(alphabetMap map[string]uint8) string {
-	inv_map := getInverseAlphabetMapping(alphabetMap)
+	invMap := getInverseAlphabetMapping(alphabetMap)
 	return "(" +
 		t.CurState.String() +
 		"," + t.NewState.String() +
-		"," + inv_map[t.curSymbol] +
-		"," + inv_map[t.newSymbol] +
+		"," + invMap[t.curSymbol] +
+		"," + invMap[t.newSymbol] +
 		"," + string(t.dir) + ")"
 }
 
 func (t Transition) GetCurSymbol(tm TM) string {
-	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
-	return inv_map[t.curSymbol]
+	invMap := getInverseAlphabetMapping(tm.AlphabetMap)
+	return invMap[t.curSymbol]
 }
 func (t Transition) GetNewSymbol(tm TM) string {
-	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
-	return inv_map[t.newSymbol]
+	invMap := getInverseAlphabetMapping(tm.AlphabetMap)
+	return invMap[t.newSymbol]
 }
 func (t Transition) GetDir() string {
 	return string(t.dir)
@@ -73,17 +74,16 @@ func (t Transition) GetDir() string {
 
 func (tm *TM) String() string {
 	// convert tape into an array of characters from the alphabet
-	tape_formatted := make([]string, len(tm.Tape))
-	inv_map := getInverseAlphabetMapping(tm.AlphabetMap)
+	tapeFormatted := make([]string, len(tm.Tape))
+	invMap := getInverseAlphabetMapping(tm.AlphabetMap)
 	for i, char := range tm.Tape {
-		tape_formatted[i] = inv_map[char]
+		tapeFormatted[i] = invMap[char]
 	}
 	//insert { } around the current position on the tape
-
-	t1 := Insert(tape_formatted, tm.Head, "{")
+	t1 := Insert(tapeFormatted, tm.Head, "{")
 	t2 := Insert(t1, tm.Head+2, "}")
 
-	transitions_string := func(t []Transition) string {
+	transitionsString := func(t []Transition) string {
 		str := "["
 		for _, trans := range t {
 			str = str + trans.asString(tm.AlphabetMap) + ","
@@ -93,7 +93,7 @@ func (tm *TM) String() string {
 		return str
 	}
 
-	nil_string := func(s *State) string {
+	nilString := func(s *State) string {
 		if s == nil {
 			return "None"
 		}
@@ -101,8 +101,8 @@ func (tm *TM) String() string {
 	}
 	return "TM:\n" +
 		"Alphabet: " + fmt.Sprintf("%v \n", tm.Alphabet) +
-		"Reject state: " + nil_string(tm.RejectState) + "\n" +
-		"Current state: " + nil_string(tm.CurrentState) + "\n" +
-		"Transitions: " + transitions_string(tm.Transitions) + "\n" +
+		"Reject state: " + nilString(tm.RejectState) + "\n" +
+		"Current state: " + nilString(tm.CurrentState) + "\n" +
+		"Transitions: " + transitionsString(tm.Transitions) + "\n" +
 		"Tape:\n" + fmt.Sprintf("%v \n", t2)
 }

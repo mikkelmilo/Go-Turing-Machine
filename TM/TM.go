@@ -93,7 +93,7 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 		s_trans := make([]uint8, len_s+1)
 		s_trans[0] = Empty
 		for i, elem := range startTape {
-			s_trans[i+1] = alphabetMap[elem]
+			s_trans[i+1] = tm.AlphabetMap[elem]
 		}
 		tm.Tape = s_trans
 	} else {
@@ -105,25 +105,19 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 	return nil, tm
 }
 
-func buildAlphabetMap(alphabet []string) map[string]uint8{
-	alphabetMap := make(map[string]uint8)
-	alphabetMap["_"] = Empty
-	alphabetMap["<"] = Left
-	alphabetMap[">"] = Right
-	alphabetMap["{"] = LeftBracket
-	alphabetMap["}"] = RightBracket
+// SetStartState set the start state
+func (tm *TM) SetStartState(s *State) {
+	tm.StartState = s
+}
 
-	var cur_uint uint8 = 0
-	for _, char := range alphabet {
-		// note: this suffices since we know neither of the contants follow each other in value.
-		if cur_uint == Empty || cur_uint == Left || cur_uint == Right ||
-			cur_uint == LeftBracket || cur_uint == RightBracket {
-			cur_uint++
-		}
-		alphabetMap[char] = cur_uint
-		cur_uint++
-	}
-	return alphabetMap
+// SetAcceptState set the accept state
+func (tm *TM) SetAcceptState(s *State) {
+	tm.AcceptState = s
+}
+
+// SetRejectState set the reject state
+func (tm *TM) SetRejectState(s *State) {
+	tm.RejectState = s
 }
 
 func (tm *TM) AddListener(l TMListener) {
@@ -144,7 +138,7 @@ func (tm *TM) RemoveListener(l TMListener) error {
 	}
 	// report error if listener does not exist.
 	if !found {
-		return errors.New("Listener not found!")
+		return errors.New("tried to remove a listener which doesn't exist on this object")
 	}
 	return nil
 }
@@ -267,11 +261,11 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error {
 	cSymbol, ok1 := tm.AlphabetMap[curSymbol]
 	if !ok1 {
-		return fmt.Errorf("Symbol %v is not in the alphabet %v", curSymbol, tm.Alphabet)
+		return fmt.Errorf("symbol %v is not in the alphabet %v", curSymbol, tm.Alphabet)
 	}
 	nSymbol, ok2 := tm.AlphabetMap[newSymbol]
 	if !ok2 {
-		return fmt.Errorf("Symbol %v is not in the alphabet %v", newSymbol, tm.Alphabet)
+		return fmt.Errorf("symbol %v is not in the alphabet %v", newSymbol, tm.Alphabet)
 	}
 
 	var cdir uint8
@@ -282,31 +276,37 @@ func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, 
 	} else if dir == "_" {
 		cdir = Empty
 	} else {
-		return fmt.Errorf("Illegal argument: %s . Must be either <, > or _", dir)
+		return fmt.Errorf("illegal argument: %s . Must be either <, > or _", dir)
 	}
 
 	if cSymbol == 3 {
-		return fmt.Errorf("Illegal argument: %s. Must be 0 or 1 or _", curSymbol)
+		return fmt.Errorf("illegal argument: %s. Must be 0 or 1 or _", curSymbol)
 	} else if nSymbol == 3 {
-		return fmt.Errorf("Illegal argument: %s . Must be 0 or 1 or _", newSymbol)
+		return fmt.Errorf("illegal argument: %s . Must be 0 or 1 or _", newSymbol)
 	}
 	tm.Transitions = append(tm.Transitions, Transition{curState, newState, cSymbol, nSymbol, cdir})
 	return nil
 }
 
-// SetStartState set the start state
-func (tm *TM) SetStartState(s *State) {
-	tm.StartState = s
-}
+func buildAlphabetMap(alphabet []string) map[string]uint8 {
+	alphabetMap := make(map[string]uint8)
+	alphabetMap["_"] = Empty
+	alphabetMap["<"] = Left
+	alphabetMap[">"] = Right
+	alphabetMap["{"] = LeftBracket
+	alphabetMap["}"] = RightBracket
 
-// SetAcceptState set the accept state
-func (tm *TM) SetAcceptState(s *State) {
-	tm.AcceptState = s
-}
-
-// SetRejectState set the reject state
-func (tm *TM) SetRejctState(s *State) {
-	tm.RejectState = s
+	var cur_uint uint8 = 0
+	for _, char := range alphabet {
+		// note: this suffices since we know neither of the contants follow each other in value.
+		if cur_uint == Empty || cur_uint == Left || cur_uint == Right ||
+			cur_uint == LeftBracket || cur_uint == RightBracket {
+			cur_uint++
+		}
+		alphabetMap[char] = cur_uint
+		cur_uint++
+	}
+	return alphabetMap
 }
 
 /*

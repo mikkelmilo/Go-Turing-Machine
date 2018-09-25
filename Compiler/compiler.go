@@ -67,14 +67,14 @@ func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TML
 			states[newState] = &TM.State{Name: newState}
 		}
 	}
-	alphabet_list := make([]string, len(alphabet))
+	alphabetList := make([]string, len(alphabet))
 	i := 0
 	for key := range alphabet {
-		alphabet_list[i] = key
+		alphabetList[i] = key
 		i++
 	}
 
-	err, tm := TM.NewTM(alphabet_list, nil)
+	err, tm := TM.NewTM(alphabetList, nil)
 	if err != nil {
 		return []TMLError{{msg: err.Error()}}, tm
 	}
@@ -88,7 +88,7 @@ func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TML
 			tm.SetAcceptState(states[c.NewState])
 		}
 		if c.NewState == "hr" {
-			tm.SetRejctState(states[c.NewState])
+			tm.SetRejectState(states[c.NewState])
 		}
 	}
 	return nil, tm

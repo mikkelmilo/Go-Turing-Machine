@@ -16,16 +16,16 @@ import (
 func TMToDotFile(tm TM.TM, fileName string) error {
 	transitions := tm.Transitions
 	var graphBuf bytes.Buffer
-	transitions_string := make([]string, 0)
+	transitionsString := make([]string, 0)
 	hasSelfLoop := make(map[string]bool) // maps a state name to true if it has a self loop in the TM
 
 	graphBuf.WriteString("digraph TM {\n")
 	graphBuf.WriteString("node [nodesep=2.0, fontsize=11];\n")
 	graphBuf.WriteString("graph [overlap = false];\n")
 
-	transitions_string = makeTransitions(transitions, hasSelfLoop, tm, transitions_string)
+	transitionsString = makeTransitions(transitions, hasSelfLoop, tm, transitionsString)
 
-	for _, tr := range transitions_string {
+	for _, tr := range transitionsString {
 		graphBuf.WriteString(tr)
 	}
 
@@ -47,38 +47,38 @@ func TMToDotFile(tm TM.TM, fileName string) error {
 	return nil
 }
 
-func makeTransitions(transitions []TM.Transition, hasSelfLoop map[string]bool, tm TM.TM, transitions_string []string) []string {
+func makeTransitions(transitions []TM.Transition, hasSelfLoop map[string]bool, tm TM.TM, transitionsString []string) []string {
 	for _, t := range transitions {
 		// if this transition is a self loop, and it is the first self loop seen for this state
 		// then draw a new transition. Otherwise just add text to the label.
 		ok, val := hasSelfLoop[t.CurState.String()]
 		if t.CurState.String() == t.NewState.String() && (!ok || !val) {
 			hasSelfLoop[t.CurState.String()] = true
-			transitions_string = addNewTransitionString(t, tm, transitions_string)
+			transitionsString = addNewTransitionString(t, tm, transitionsString)
 		} else if t.CurState.String() == t.NewState.String() && hasSelfLoop[t.CurState.String()] == true {
 			// else find the graphviz transition and modify it
 			str := t.CurState.String() + " -> " + t.NewState.String()
-			findAndModifyTransition(transitions_string, str, t, tm)
+			findAndModifyTransition(transitionsString, str, t, tm)
 		} else {
-			transitions_string = addNewTransitionString(t, tm, transitions_string)
+			transitionsString = addNewTransitionString(t, tm, transitionsString)
 		}
 	}
-	return transitions_string
+	return transitionsString
 }
 
-func addNewTransitionString(t TM.Transition, tm TM.TM, transitions_string []string) []string {
+func addNewTransitionString(t TM.Transition, tm TM.TM, transitionsString []string) []string {
 	label := "label=\" " + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\""
-	minlength := "minlength=2"
-	options := " [" + label + " " + minlength + " ]"
-	transitions_string = append(transitions_string, t.CurState.String()+" -> "+t.NewState.String()+options+";\n")
-	return transitions_string
+	minLength := "minLength=2"
+	options := " [" + label + " " + minLength + " ]"
+	transitionsString = append(transitionsString, t.CurState.String()+" -> "+t.NewState.String()+options+";\n")
+	return transitionsString
 }
 
-func findAndModifyTransition(transitions_string []string, str string, t TM.Transition, tm TM.TM) {
-	for j, tr := range transitions_string {
+func findAndModifyTransition(transitionsString []string, str string, t TM.Transition, tm TM.TM) {
+	for j, tr := range transitionsString {
 		if strings.HasPrefix(tr, str) {
-			new_str := "label=\" " + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\\n"
-			transitions_string[j] = strings.Replace(tr, "label=\" ", new_str, 1)
+			newStr := "label=\" " + t.GetCurSymbol(tm) + "," + t.GetNewSymbol(tm) + "," + t.GetDir() + "\\n"
+			transitionsString[j] = strings.Replace(tr, "label=\" ", newStr, 1)
 			break
 		}
 	}
