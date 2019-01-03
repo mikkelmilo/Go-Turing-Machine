@@ -20,9 +20,9 @@ func TestBinaryIncTM(t *testing.T) {
 	err = tm.Run(nil, nil)
 	assert.Nil(t, err)
 	// note that tm.Tape[0] is "reserved", so the binary number starts at tm.Tape[1]
-	assert.Equal(t, tm.AlphabetMap["1"], tm.Tape[1])
-	assert.Equal(t, tm.AlphabetMap["0"], tm.Tape[2])
-	assert.Equal(t, tm.AlphabetMap["0"], tm.Tape[3])
+	assert.Equal(t, tm.GetAlphabetMap()["1"], tm.GetTape()[1])
+	assert.Equal(t, tm.GetAlphabetMap()["0"], tm.GetTape()[2])
+	assert.Equal(t, tm.GetAlphabetMap()["0"], tm.GetTape()[3])
 }
 
 func TestInfiniteBinaryIncTM(t *testing.T) {

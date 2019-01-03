@@ -3,28 +3,28 @@ package TM
 import "fmt"
 
 type TMListener interface {
-	step(fromState *State, fromSymbol string, tm *TM)
-	haltedWithAccept(tm *TM)
-	haltedWithReject(tm *TM)
-	haltedWithError(tm *TM, err error)
+	step(fromState *State, fromSymbol string, tm TM)
+	haltedWithAccept(tm TM)
+	haltedWithReject(tm TM)
+	haltedWithError(tm TM, err error)
 }
 
 type TMPrintListener struct {
 }
 
-func (TMPrintListener) step(fromState *State, fromSymbol string, tm *TM) {
-	println("transitioned from state " + fromState.String() + " with symbol " + fromSymbol + " to state " + tm.CurrentState.String())
+func (TMPrintListener) step(fromState *State, fromSymbol string, tm TM) {
+	println("transitioned from state " + fromState.String() + " with symbol " + fromSymbol + " to state " + tm.GetCurrentState().String())
 }
 
-func (TMPrintListener) haltedWithAccept(tm *TM) {
+func (TMPrintListener) haltedWithAccept(tm TM) {
 	println("halted with accept")
 }
 
-func (TMPrintListener) haltedWithReject(tm *TM) {
+func (TMPrintListener) haltedWithReject(tm TM) {
 	println("halted with reject")
 }
 
-func (TMPrintListener) haltedWithError(tm *TM, err error) {
+func (TMPrintListener) haltedWithError(tm TM, err error) {
 	println("halted with error:", err.Error())
 }
 
@@ -61,32 +61,32 @@ func (t Transition) asString(alphabetMap map[string]uint8) string {
 }
 
 func (t Transition) GetCurSymbol(tm TM) string {
-	invMap := getInverseAlphabetMapping(tm.AlphabetMap)
+	invMap := getInverseAlphabetMapping(tm.GetAlphabetMap())
 	return invMap[t.curSymbol]
 }
 func (t Transition) GetNewSymbol(tm TM) string {
-	invMap := getInverseAlphabetMapping(tm.AlphabetMap)
+	invMap := getInverseAlphabetMapping(tm.GetAlphabetMap())
 	return invMap[t.newSymbol]
 }
 func (t Transition) GetDir() string {
 	return string(t.dir)
 }
 
-func (tm *TM) String() string {
+func (tm *tmImpl) String() string {
 	// convert tape into an array of characters from the alphabet
-	tapeFormatted := make([]string, len(tm.Tape))
-	invMap := getInverseAlphabetMapping(tm.AlphabetMap)
+	tapeFormatted := make([]string, len(tm.GetTape()))
+	invMap := getInverseAlphabetMapping(tm.GetAlphabetMap())
 	for i, char := range tm.Tape {
 		tapeFormatted[i] = invMap[char]
 	}
 	//insert { } around the current position on the tape
-	t1 := Insert(tapeFormatted, tm.Head, "{")
-	t2 := Insert(t1, tm.Head+2, "}")
+	t1 := Insert(tapeFormatted, tm.GetHead(), "{")
+	t2 := Insert(t1, tm.GetHead()+2, "}")
 
 	transitionsString := func(t []Transition) string {
 		str := "["
 		for _, trans := range t {
-			str = str + trans.asString(tm.AlphabetMap) + ","
+			str = str + trans.asString(tm.GetAlphabetMap()) + ","
 		}
 		str = str[0 : len(str)-1] // trim last ','
 		str = str + "]"

@@ -14,12 +14,12 @@ import (
 */
 
 func TMToDotFile(tm TM.TM, fileName string) error {
-	transitions := tm.Transitions
+	transitions := tm.GetTransitions()
 	var graphBuf bytes.Buffer
 	transitionsString := make([]string, 0)
-	hasSelfLoop := make(map[string]bool) // maps a state name to true if it has a self loop in the TM
+	hasSelfLoop := make(map[string]bool) // maps a state name to true if it has a self loop in the tmImpl
 
-	graphBuf.WriteString("digraph TM {\n")
+	graphBuf.WriteString("digraph tmImpl {\n")
 	graphBuf.WriteString("node [nodesep=2.0, fontsize=11];\n")
 	graphBuf.WriteString("graph [overlap = false];\n")
 

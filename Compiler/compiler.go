@@ -24,28 +24,28 @@ const (
 
 /*
 	Compiles a TML program, given as a byte buffer, using a given TMLParser and TMLSemanticChecker.
-	Returns a list of errors and the generated TM, if no errors were found.
+	Returns a list of errors and the generated tmImpl, if no errors were found.
 */
 func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TMLSemanticChecker) ([]TMLError, TM.TM) {
 	// parse the program, and report any errors.
 	errs, syntaxTree := parser(program)
 	if len(errs) != 0 {
-		return errs, TM.TM{}
+		return errs, nil
 	}
 	// do semantic checking, and report any errors.
 	errs = semantChecker(antlr.ParseTreeWalkerDefault, syntaxTree)
 	if len(errs) != 0 {
-		return errs, TM.TM{}
+		return errs, nil
 	}
 
-	// assuming no other errors, construct the TM. First we need to unfold macro applications.
+	// assuming no other errors, construct the tmImpl. First we need to unfold macro applications.
 	var macroUnfolder TMLMacroUnfolder
 	antlr.ParseTreeWalkerDefault.Walk(&macroUnfolder, syntaxTree)
 
 	// unfoldedProgram is a list of commands where all macro applications have been replaced by its macro definition.
 	// and everything has been neatly merged into a sequential program.
 	unfoldedProgram := macroUnfolder.Program
-	// before constructing the TM we must first identify the alphabet and the states.
+	// before constructing the tmImpl we must first identify the alphabet and the states.
 	alphabet := make(map[string]bool, 0)
 	states := make(map[string]*TM.State)
 
@@ -81,7 +81,7 @@ func CompileTMLProgram(program bytes.Buffer, parser TMLParser, semantChecker TML
 	if err != nil {
 		return []TMLError{{msg: err.Error()}}, tm
 	}
-	// add transitions to the TM
+	// add transitions to the tmImpl
 	for _, c := range unfoldedProgram {
 		tm.AddTransition(states[c.CurrentState], states[c.NewState], c.CurrentSymbol, c.NewSymbol, c.Direction)
 		if c.CurrentState == "hs" {

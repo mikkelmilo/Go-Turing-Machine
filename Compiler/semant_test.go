@@ -32,38 +32,27 @@ func TestNewTMLBaseSemanticCheckerOnOnlyStartTransitionProgram(t *testing.T) {
 }
 
 func TestNewTMLBaseSemanticCheckerOnMultipleStartStates(t *testing.T) {
-	program_string := "(hs,a,_,1,>)(hs,a,_,1,>)" +
-		"(ha,a,_,1,>)(hr,a,_,1,>)" //all special states are necessary so we add these to prevent errors unrelated to this test
+	program_string := "(hs,ha,_,1,>)(hs,hr,_,1,>)"
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 
 	errors := CheckSemantic(pt, tree)
-
-	assert.Equal(t, 1, len(errors), "Expected one error.")
-}
-
-func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStates(t *testing.T) {
-	program_string := "(ha,a,_,1,>)(ha,a,_,1,>)" +
-		"(hs,a,_,1,>)(hr,a,_,1,>)" //all special states are necessary so we add these to prevent errors unrelated to this test
-	_, tree := setupParser(program_string)
-	pt := antlr.ParseTreeWalkerDefault
-	errors := CheckSemantic(pt, tree)
-
+	fmt.Println(errors)
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
 func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStatesInMacro(t *testing.T) {
 	program_string :=
-		"(hs,a,_,1,>)(hr,a,_,1,>)(ha,a,_,1,>)" +
+		"(hs,hr,_,1,>)(hs,ha,_,1,>)" +
 			"define macro m {" +
 			"(ha,a,_,1,>)" +
-			"(ha,a,_,1,>)" +
-			"(hs,a,_,1,>)" +
-			"(hr,a,_,1,>)" +
+			"(hs,ha,_,1,>)" +
+			"(hs,hr,_,1,>)" +
 			"}"
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 	errors := CheckSemantic(pt, tree)
+	fmt.Println(errors)
 
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }

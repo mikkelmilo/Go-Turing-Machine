@@ -28,6 +28,28 @@ const (
 	Right = 62
 )
 
+type TM interface {
+	SetStartState(s *State)
+	SetAcceptState(s *State)
+	SetRejectState(s *State)
+	GetTransitions() []Transition
+	GetStartState() *State
+	GetAcceptState() *State
+	GetRejectState() *State
+	GetCurrentState() *State
+	GetTape() []uint8
+	GetHead() int
+	GetAlphabet() []string
+	GetAlphabetMap() map[string]uint8
+	SetTransitions(t []Transition) error
+	AddListener(l TMListener)
+	RemoveListener(l TMListener) error
+	Run(state chan string, quit chan int) error
+	Step() error
+	AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error
+	String() string
+}
+
 // Transition : a representation of a transition
 type Transition struct {
 	CurState  *State
@@ -37,7 +59,7 @@ type Transition struct {
 	dir       uint8
 }
 
-// State struct for representing a state in the TM
+// State struct for representing a state in the tmImpl
 type State struct {
 	Name string
 }
@@ -46,8 +68,8 @@ func (s *State) String() string {
 	return s.Name
 }
 
-//TM a Turing Machine where the input- and output alphabets consist of 1 and 0.
-type TM struct {
+//tmImpl a Turing Machine where the input- and output alphabets consist of 1 and 0.
+type tmImpl struct {
 	StartState   *State
 	AcceptState  *State
 	RejectState  *State
@@ -60,21 +82,62 @@ type TM struct {
 	listeners    []TMListener
 }
 
+func (tm *tmImpl) SetTransitions(t []Transition) error {
+	tm.Transitions = t
+	return nil
+}
+
+func (tm *tmImpl) GetAlphabet() []string {
+	return tm.Alphabet
+}
+
+func (tm *tmImpl) GetAlphabetMap() map[string]uint8 {
+	return tm.AlphabetMap
+}
+
+func (tm *tmImpl) GetTransitions() []Transition {
+	return tm.Transitions
+}
+
+func (tm *tmImpl) GetStartState() *State {
+	return tm.StartState
+}
+
+func (tm *tmImpl) GetAcceptState() *State {
+	return tm.AcceptState
+}
+
+func (tm *tmImpl) GetRejectState() *State {
+	return tm.RejectState
+}
+
+func (tm *tmImpl) GetCurrentState() *State {
+	return tm.CurrentState
+}
+
+func (tm *tmImpl) GetTape() []uint8 {
+	return tm.Tape
+}
+
+func (tm *tmImpl) GetHead() int {
+	return tm.Head
+}
+
 /*
- * NewTM constructs a TM from the specified alphabet, and optional initial tape.
+ * NewTM constructs a tmImpl from the specified alphabet, and optional initial tape.
  * @precondition: max alphabet size is 251
  */
 func NewTM(alphabet []string, startTape []string) (error, TM) {
-	tm := TM{}
+	tm := tmImpl{}
 
 	if alphabet == nil {
-		return errors.New("alphabet must be different from nil"), tm
+		return errors.New("alphabet must be different from nil"), &tm
 	}
 	// report an error on too large alphabet (> 253)
 	if len(alphabet) > 251 {
-		return fmt.Errorf("alphabet size too large. Maximal size: 251. Got: %v", len(alphabet)), tm
+		return fmt.Errorf("alphabet size too large. Maximal size: 251. Got: %v", len(alphabet)), &tm
 	}
-	// build alphabet map to uint8 on which the TM will operate
+	// build alphabet map to uint8 on which the tmImpl will operate
 	// uint8 values 95, 60, 62, 123, and 125 are reserved.
 	tm.Alphabet = alphabet
 	tm.AlphabetMap = buildAlphabetMap(alphabet)
@@ -102,34 +165,34 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 	}
 	//finally, initialize the list of listeners to be empty
 	tm.listeners = make([]TMListener, 0)
-	return nil, tm
+	return nil, &tm
 }
 
 // SetStartState set the start state
-func (tm *TM) SetStartState(s *State) {
+func (tm *tmImpl) SetStartState(s *State) {
 	tm.StartState = s
 }
 
 // SetAcceptState set the accept state
-func (tm *TM) SetAcceptState(s *State) {
+func (tm *tmImpl) SetAcceptState(s *State) {
 	tm.AcceptState = s
 }
 
 // SetRejectState set the reject state
-func (tm *TM) SetRejectState(s *State) {
+func (tm *tmImpl) SetRejectState(s *State) {
 	tm.RejectState = s
 }
 
-func (tm *TM) AddListener(l TMListener) {
+func (tm *tmImpl) AddListener(l TMListener) {
 	tm.listeners = append(tm.listeners, l)
 }
 
 /*
-	Removes all instances of a listener from the TM. Reports an error if listener is not found.
+	Removes all instances of a listener from the tmImpl. Reports an error if listener is not found.
 */
-func (tm *TM) RemoveListener(l TMListener) error {
+func (tm *tmImpl) RemoveListener(l TMListener) error {
 	found := false
-	// remove all instances of this listener from the TM
+	// remove all instances of this listener from the tmImpl
 	for i, e := range tm.listeners {
 		if e == l {
 			found = true
@@ -144,9 +207,9 @@ func (tm *TM) RemoveListener(l TMListener) error {
 }
 
 /*
-	Removes all listeners from the TM
+	Removes all listeners from the tmImpl
 */
-func (tm *TM) RemoveListeners() {
+func (tm *tmImpl) RemoveListeners() {
 	tm.listeners = make([]TMListener, 0)
 }
 
@@ -162,8 +225,8 @@ func expandTape(s []uint8) []uint8 {
 	return append(s, a...)
 }
 
-// Run the TM until it halts (we assume it always halts)
-func (tm *TM) Run(state chan string, quit chan int) error {
+// Run the tmImpl until it halts (we assume it always halts)
+func (tm *tmImpl) Run(state chan string, quit chan int) error {
 	var steps uint64
 	steps = 0
 	if tm.StartState == nil {
@@ -194,7 +257,7 @@ func (tm *TM) Run(state chan string, quit chan int) error {
 }
 
 // Step : takes one step
-func (tm *TM) Step() error {
+func (tm *tmImpl) Step() error {
 	// first check if current state is nil; then set current state to the start state
 	// else check if current state is either accept or reject. If so, report an error.
 	if tm.CurrentState == nil {
@@ -202,7 +265,7 @@ func (tm *TM) Step() error {
 		tm.CurrentState = tm.StartState
 
 	} else if tm.CurrentState == tm.AcceptState {
-		err := errors.New("TM is already at the accept state and cannot make further transitions")
+		err := errors.New("tmImpl is already at the accept state and cannot make further transitions")
 		for _, l := range tm.listeners {
 			l.haltedWithAccept(tm)
 		}
@@ -230,7 +293,7 @@ func (tm *TM) Step() error {
 	return err
 }
 
-func (tm *TM) makeTransition(s *State, symbol uint8) error {
+func (tm *tmImpl) makeTransition(s *State, symbol uint8) error {
 	found := false
 	for _, t := range tm.Transitions {
 		if t.CurState == s && t.curSymbol == symbol {
@@ -257,8 +320,8 @@ func (tm *TM) makeTransition(s *State, symbol uint8) error {
 	return nil
 }
 
-//AddTransition adds a transition to the TM
-func (tm *TM) AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error {
+//AddTransition adds a transition to the tmImpl
+func (tm *tmImpl) AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error {
 	cSymbol, ok1 := tm.AlphabetMap[curSymbol]
 	if !ok1 {
 		return fmt.Errorf("symbol %v is not in the alphabet %v", curSymbol, tm.Alphabet)

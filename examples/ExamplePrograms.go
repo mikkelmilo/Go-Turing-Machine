@@ -4,21 +4,21 @@ import "github.com/mikkelmilo/Go-Turing-Machine/TM"
 
 /*
  * This packages contains example Turing-Machine programs written using the functions provided
- * by the TM package (ie. NOT by generating them using the compiler+interpreter).
+ * by the tmImpl package (ie. NOT by generating them using the compiler+interpreter).
  *
- * Each function returns a TM struct which will emulate the specified program when executed
+ * Each function returns a tmImpl struct which will emulate the specified program when executed
  * using the .Run() method.
  */
 
 /*
- * This function returns a TM which emulates the increment function on a binary number (left is most significant bit).
+ * This function returns a tmImpl which emulates the increment function on a binary number (left is most significant bit).
  * The binary number is pre-specified to be TODO: complete description
  *
- * The logic of this TM is as follows:
+ * The logic of this tmImpl is as follows:
  * First move tape head to the end of the given binary number (by going right until a _ is met)
  *
  */
-func IncBinaryTM(s []string) (error, *TM.TM) {
+func IncBinaryTM(s []string) (error, TM.TM) {
 	err, tm := TM.NewTM([]string{"0", "1"}, s)
 	if err != nil {
 		return err, nil
@@ -32,9 +32,9 @@ func IncBinaryTM(s []string) (error, *TM.TM) {
 	s5 := TM.State{Name: "e"}
 	ha := TM.State{Name: "ha"}
 	hr := TM.State{Name: "hr"}
-	tm.AcceptState = &ha
-	tm.StartState = &start_state
-	tm.RejectState = &hr
+	tm.SetAcceptState(&ha)
+	tm.SetStartState(&start_state)
+	tm.SetRejectState(&hr)
 	//first go to the end of the binary number.
 
 	err1 := tm.AddTransition(&start_state, &s0, "_", "_", ">")
@@ -127,10 +127,10 @@ func IncBinaryTM(s []string) (error, *TM.TM) {
 
 	// when we're at the beginning, goto accept state and halt
 	err1 = tm.AddTransition(&s5, &ha, "_", "_", "_")
-	return err1, &tm
+	return err1, tm
 }
 
-func InfinitelyIncBinaryTM(s []string) (error, *TM.TM) {
+func InfinitelyIncBinaryTM(s []string) (error, TM.TM) {
 	err, tm := IncBinaryTM(s)
 	if err != nil {
 		return err, nil
@@ -139,10 +139,10 @@ func InfinitelyIncBinaryTM(s []string) (error, *TM.TM) {
 	// we exploit the fact that we know from the implementation of IncBinaryTM that the
 	// last transition added is from s5 to ha, so we can get the last element in tm.Transitions
 	// to get the pointer to s5. Then we delete the last transition, and add a new transition
-	// which causes the TM to loop.
-	s5 := tm.Transitions[len(tm.Transitions)-1].CurState
-	tm.Transitions = tm.Transitions[:len(tm.Transitions)-1] // remove last item from tm.Transitions
+	// which causes the tmImpl to loop.
+	s5 := tm.GetTransitions()[len(tm.GetTransitions())-1].CurState
+	tm.SetTransitions(tm.GetTransitions()[:len(tm.GetTransitions())-1]) // remove last item from tm.Transitions
 	// add a transition where we start from the beginning whenever the number as been incremented once.
-	err = tm.AddTransition(s5, tm.StartState, "_", "_", ">")
+	err = tm.AddTransition(s5, tm.GetStartState(), "_", "_", ">")
 	return err, tm
 }
