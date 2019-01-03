@@ -18,9 +18,13 @@ The following illustrates a program written in my Turing Machine Language (TML),
 
 ### TML program
 The program below writes 1 on the initial tape position, then moves the tape head one spot to the right, writes 0, goes right again, and finally writes 1 and enters the accept state, thereby halting.
+
 (hs,a,\_,1,>)
+
 (a,b,\_,0,>)
+
 (b,ha,\_,1,\_)
+
 
 Save this in a file called 'test'.
 
