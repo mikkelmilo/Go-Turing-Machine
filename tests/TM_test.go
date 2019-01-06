@@ -17,7 +17,7 @@ func TestBinaryIncTM(t *testing.T) {
 	// the binary number we wish to increment is 011, which is expected to become 100
 	err, tm := examples.IncBinaryTM([]string{"0", "1", "1"})
 	assert.Nil(t, err)
-	err = tm.Run(nil, nil)
+	err = tm.Run()
 	assert.Nil(t, err)
 	// note that tm.Tape[0] is "reserved", so the binary number starts at tm.Tape[1]
 	assert.Equal(t, tm.GetAlphabetMap()["1"], tm.GetTape()[1])

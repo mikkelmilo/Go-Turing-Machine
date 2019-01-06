@@ -6,26 +6,20 @@ import (
 )
 
 const (
-	// One representation
-	One uint8 = 49
+	//empty underscore
+	empty uint8 = 95
 
-	// Zero representation
-	Zero uint8 = 48
+	// leftBracket representation
+	leftBracket = 123
 
-	//Empty underscore
-	Empty uint8 = 95
+	// rightBracket representation
+	rightBracket = 125
 
-	// LeftBracket representation
-	LeftBracket = 123
+	// left arrow
+	left = 60
 
-	// RightBracket representation
-	RightBracket = 125
-
-	// Left arrow
-	Left = 60
-
-	// Right arrow
-	Right = 62
+	// right arrow
+	right = 62
 )
 
 type TM interface {
@@ -44,7 +38,7 @@ type TM interface {
 	SetTransitions(t []Transition) error
 	AddListener(l TMListener)
 	RemoveListener(l TMListener) error
-	Run(state chan string, quit chan int) error
+	Run() error
 	Step() error
 	AddTransition(curState *State, newState *State, curSymbol string, newSymbol string, dir string) error
 	String() string
@@ -143,8 +137,8 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 	tm.AlphabetMap = buildAlphabetMap(alphabet)
 
 	tm.Head = 0
-	// initially, set tape to an array of either two 'Empty' elements,
-	// or if a tape was given, set tape to [Empty :: startTape]
+	// initially, set tape to an array of either two 'empty' elements,
+	// or if a tape was given, set tape to [empty :: startTape]
 	var len_s int
 	if startTape == nil {
 		len_s = 0
@@ -154,13 +148,13 @@ func NewTM(alphabet []string, startTape []string) (error, TM) {
 	if startTape != nil && len_s != 0 {
 		// translate given tape to type []uint8 and append
 		s_trans := make([]uint8, len_s+1)
-		s_trans[0] = Empty
+		s_trans[0] = empty
 		for i, elem := range startTape {
 			s_trans[i+1] = tm.AlphabetMap[elem]
 		}
 		tm.Tape = s_trans
 	} else {
-		tm.Tape = []uint8{Empty, Empty}
+		tm.Tape = []uint8{empty, empty}
 
 	}
 	//finally, initialize the list of listeners to be empty
@@ -220,38 +214,25 @@ func expandTape(s []uint8) []uint8 {
 	length := len(s)
 	a := make([]uint8, length)
 	for i := range a {
-		a[i] = Empty
+		a[i] = empty
 	}
 	return append(s, a...)
 }
 
 // Run the tmImpl until it halts (we assume it always halts)
-func (tm *tmImpl) Run(state chan string, quit chan int) error {
+func (tm *tmImpl) Run() error {
 	var steps uint64
 	steps = 0
 	if tm.StartState == nil {
 		return errors.New("no start state defined")
 	}
 	for tm.CurrentState != tm.AcceptState && tm.CurrentState != tm.RejectState {
-		select {
-		case <-state:
-			state <- tm.String()
-		case <-quit:
-			quit <- 1
-			return nil
-		default:
-			err := tm.Step()
-			steps++
-			if err != nil {
-				if quit != nil {
-					quit <- -1
-				}
-				return err
-			}
+		err := tm.Step()
+		steps++
+		if err != nil {
+			return err
+
 		}
-	}
-	if quit != nil {
-		quit <- 1
 	}
 	return nil
 }
@@ -299,12 +280,12 @@ func (tm *tmImpl) makeTransition(s *State, symbol uint8) error {
 		if t.CurState == s && t.curSymbol == symbol {
 			tm.CurrentState = t.NewState
 			tm.Tape[tm.Head] = t.newSymbol
-			if t.dir == Right {
+			if t.dir == right {
 				tm.Head++
 				if tm.Head >= len(tm.Tape) {
 					tm.Tape = expandTape(tm.Tape)
 				}
-			} else if t.dir == Left {
+			} else if t.dir == left {
 				if tm.Head <= 0 {
 					return fmt.Errorf("tried to move < out of bounds")
 				}
@@ -333,11 +314,11 @@ func (tm *tmImpl) AddTransition(curState *State, newState *State, curSymbol stri
 
 	var cdir uint8
 	if dir == "<" {
-		cdir = Left
+		cdir = left
 	} else if dir == ">" {
-		cdir = Right
+		cdir = right
 	} else if dir == "_" {
-		cdir = Empty
+		cdir = empty
 	} else {
 		return fmt.Errorf("illegal argument: %s . Must be either <, > or _", dir)
 	}
@@ -353,17 +334,17 @@ func (tm *tmImpl) AddTransition(curState *State, newState *State, curSymbol stri
 
 func buildAlphabetMap(alphabet []string) map[string]uint8 {
 	alphabetMap := make(map[string]uint8)
-	alphabetMap["_"] = Empty
-	alphabetMap["<"] = Left
-	alphabetMap[">"] = Right
-	alphabetMap["{"] = LeftBracket
-	alphabetMap["}"] = RightBracket
+	alphabetMap["_"] = empty
+	alphabetMap["<"] = left
+	alphabetMap[">"] = right
+	alphabetMap["{"] = leftBracket
+	alphabetMap["}"] = rightBracket
 
 	var cur_uint uint8 = 0
 	for _, char := range alphabet {
 		// note: this suffices since we know neither of the contants follow each other in value.
-		if cur_uint == Empty || cur_uint == Left || cur_uint == Right ||
-			cur_uint == LeftBracket || cur_uint == RightBracket {
+		if cur_uint == empty || cur_uint == left || cur_uint == right ||
+			cur_uint == leftBracket || cur_uint == rightBracket {
 			cur_uint++
 		}
 		alphabetMap[char] = cur_uint

@@ -152,6 +152,8 @@ func (semant *semantTreeListener) EnterCommand(c *parser.CommandContext) {
 				if !semant.inMacro {
 					semant.startStateChanged = true
 				}
+			} else if !semant.inMacro || (semant.inMacro && semant.startStateChanged) {
+				semant.appendErrorMsgUniquely("Multiple Start states detected", c.GetStart())
 			}
 		case "ha":
 			if !semant.seenAcceptState {
@@ -159,7 +161,8 @@ func (semant *semantTreeListener) EnterCommand(c *parser.CommandContext) {
 				if !semant.inMacro {
 					semant.acceptStateChanged = true
 				}
-			} else if stateType == "currentstate" {
+			}
+			if stateType == "currentstate" {
 				semant.AppendErrorMsg("Accept state cannot have transitions to other states", c.GetStart())
 			}
 		case "hr":
@@ -168,7 +171,8 @@ func (semant *semantTreeListener) EnterCommand(c *parser.CommandContext) {
 				if !semant.inMacro {
 					semant.rejectStateChanged = true
 				}
-			} else if stateType == "currentstate" {
+			}
+			if stateType == "currentstate" {
 				semant.AppendErrorMsg("Reject state cannot have transitions to other states", c.GetStart())
 			}
 		}
@@ -216,6 +220,28 @@ func (semant *semantTreeListener) AppendErrorMsg(msg string, c antlr.Token) {
 			line:   c.GetLine(),
 			msg:    msg,
 		})
+}
+
+/*
+	Appends an error message only if the msg string does not already exist in the list of errors.
+	Note that the token c is ignored.
+*/
+func (semant *semantTreeListener) appendErrorMsgUniquely(msg string, c antlr.Token) {
+	hasMsg := false
+	for _, m := range semant.errors {
+		if m.msg == msg {
+			hasMsg = true
+			break
+		}
+	}
+	if !hasMsg {
+		semant.errors = append(semant.errors,
+			TMLError{
+				column: c.GetColumn(),
+				line:   c.GetLine(),
+				msg:    msg,
+			})
+	}
 }
 
 // -------------------------------------------------------------------------------------

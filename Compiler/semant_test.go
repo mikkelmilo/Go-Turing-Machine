@@ -41,13 +41,29 @@ func TestNewTMLBaseSemanticCheckerOnMultipleStartStates(t *testing.T) {
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
-func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStatesInMacro(t *testing.T) {
+func TestNewTMLBaseSemanticCheckerOnMultipleStartStatesInMacro(t *testing.T) {
 	program_string :=
-		"(hs,hr,_,1,>)(hs,ha,_,1,>)" +
+		"(hs,hr,_,1,>)(a,ha,_,1,>)" +
+			"define macro m {" +
+			"(hs,hr,_,1,>)" +
+			"(hs,ha,_,1,>)" +
+			"}"
+	_, tree := setupParser(program_string)
+	pt := antlr.ParseTreeWalkerDefault
+	errors := CheckSemantic(pt, tree)
+	fmt.Println(errors)
+
+	assert.Equal(t, 1, len(errors), "Expected one error.")
+}
+
+func TestNewTMLBaseSemanticCheckerOnIllegalTransitionFromAcceptStateInMacro(t *testing.T) {
+	program_string :=
+		"(hs,hr,_,1,>)(a,ha,_,1,>)" +
 			"define macro m {" +
 			"(ha,a,_,1,>)" +
-			"(hs,ha,_,1,>)" +
-			"(hs,hr,_,1,>)" +
+			"(a,ha,_,1,>)" +
+			"(a,hr,_,1,>)" +
+			"(hs,a,_,1,>)" +
 			"}"
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
@@ -59,17 +75,17 @@ func TestNewTMLBaseSemanticCheckerOnMultipleAcceptStatesInMacro(t *testing.T) {
 
 func TestNewTMLBaseSemanticCheckerOnMissingMacroStates(t *testing.T) {
 	program_string :=
-		"(ha,a,_,1,>)" +
+		"(hs,a,_,1,>)" +
+			"(a,hr,_,1,>)" +
+			"(a,ha,_,1,>)" +
 			"define macro m {" +
-			"(ha,a,_,1,>)" +
-			"(hr,a,_,1,>)" +
-			"}" +
-			"(hs,a,_,1,>)" +
-			"(hr,a,_,1,>)"
+			"(a,ha,_,1,>)" +
+			"(a,hr,_,1,>)" +
+			"}"
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
-
 	errors := CheckSemantic(pt, tree)
+	fmt.Printf("%v\n", errors)
 	assert.Equal(t, 1, len(errors), "Expected one error.")
 }
 
@@ -110,17 +126,16 @@ func TestCheckSemantic_unreachable_macrostates1(t *testing.T) {
 
 func TestCheckSemantic_unreachable_macrostates2(t *testing.T) {
 	program_string :=
-		"(ha,a,_,1,>)" +
+		"(hs,a,_,1,>)" +
+			"(a,ha,_,1,>)" +
+			"(a,hr,_,1,>)" +
 			"define macro m {" +
 			"(hs,a,_,1,>)" +
 			"(a,ha,_,1,>)" +
 			"(c,a,_,1,>)" + // c is unreachable
 			"(c,hr,_,1,>)" +
 			"(a,hr,_,1,>)" + // but hr is not since a can reach it, and a is reachable
-			"}" +
-			"(hs,a,_,1,>)" +
-			"(hr,a,_,1,>)"
-
+			"}"
 	_, tree := setupParser(program_string)
 	pt := antlr.ParseTreeWalkerDefault
 
